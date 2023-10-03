@@ -6,16 +6,23 @@
 
 int key_size=10;
 int value_size=100;
+std::string performance_metrics_file_path = "../performance/performance_metrics.csv";
 
-std::vector<Query> GenerateWorkload(
+void GenerateWorkload(
     double emptyPointQueries,
     double nonEmptyPointQueries,
     double rangeQueries,
     double writeQueries
-    std::string db_path,
     std::string key_file_path,
     rocksdb::DB * db
 ) {
+    //write performance metrics in a file
+    std::ofstream metricsFile(performance_metrics_file_path);
+        if (!metricsFile.is_open()) {
+            std::cerr << "Failed to open metrics file for writing." << std::endl;
+            return;
+        }
+
     rocksdb::Options rocksdb_opt;
     rocksdb_opt.statistics = rocksdb::CreateDBStatistics();
 
@@ -48,14 +55,26 @@ std::vector<Query> GenerateWorkload(
 
         if (writeQueries > 0)
         {
-            std::pair<int, int> inserts_duration = run_random_inserts(key_file_path, db, writeQueries);
-            write_duration = inserts_duration.first;
-            compact_duration = inserts_duration.second;
+            int write_duration = run_random_inserts(key_file_path, db, writeQueries);
         }
+        std::string statistics = rocksdb_opt.statistics->ToString();
+        std::string io_statistics = rocksdb::get_iostats_context()->ToString();
+        std::cout << statistics << std::endl;
+        std::cout << io_statistics << std::endl;
 
-         std::cout << rocksdb_opt.statistics->ToString() << std::endl;
-         std::cout << rocksdb::get_iostats_context()->ToString() << std::endl;
+        // Write metrics to the file
+        //format of metrics - empty reads duration, non-empty reads duration, range query duration, write duration, statistics, io_statistics
+        //duration is in ms
+        metricsFile << "Empty Reads Duration:" << empty_read_duration << ","
+                    << "Read Duration:" << read_duration << ","
+                    << "Range Reads Duration:" << range_duration << ","
+                    << "Write Duration:" << write_duration << ","
+                    << "Statistics:" << statistics << ","
+                    << "IO Statistics:" << io_statistics << std::endl;
 
+        // Close the metrics file
+        metricsFile.close();
+       return;
 
 }
 

@@ -1,24 +1,26 @@
 #ifndef WORKLOAD_GENERATOR_H
 #define WORKLOAD_GENERATOR_H
 
-#include <string>
-#include <vector>
 
-// Define a structure for query workload
-struct Query {
-    enum class Type { EmptyPoint, NonEmptyPoint, Range, Write };
-    Type type;
-    // Add other fields specific to each query type
+class WorkloadGenerator {
+
+public:
+    WorkloadGenerator(rocksdb::DB *db);
+    void GenerateWorkload(
+        double emptyPointQueries,
+        double nonEmptyPointQueries,
+        double rangeQueries,
+        double writeQueries,
+        std::string key_file_path
+    );
+private:
+    std::vector<std::string> get_all_valid_keys(std::string key_file_path);
+    void append_valid_keys(std::string key_file_path, std::vector<std::string> & new_keys);
+    int run_random_non_empty_reads(std::vector<std::string> existing_keys, rocksdb::DB * db, int num_queries);
+    std::vector<std::string> generate_empty_keys(std::vector<std::string> existing_keys, int num_queries);
+    int run_random_empty_reads(std::vector<std::string> existing_keys, rocksdb::DB * db, int num_queries);
+    int run_range_reads(std::vector<std::string> existing_keys, rocksdb::DB * db, int num_queries);
+    int run_random_inserts(std::string key_file_path, rocksdb::DB * db, int num_queries);
+
 };
-
-std::vector<Query> GenerateWorkload(
-    double emptyPointPercentage,
-    double nonEmptyPointPercentage,
-    double rangeQueryPercentage,
-    double writeQueryPercentage,
-    int totalQueries
-);
-
-void MeasurePerformance(const std::vector<Query>& workload);
-
 #endif

@@ -8,9 +8,10 @@
 #include "../data/data_generator.hpp"
 #include "rocksdb/db.h"
 #include "rocksdb/options.h"
-#include "TuningParams.hpp"
+#include "../tuning/TuningParams.hpp"
+#include "../data/workload_generator.hpp"
 
-
+std::string key_file_path =  "../database/keyfile.txt";
 int main(int argc, char* argv[]) {
     using namespace clipp;
 
@@ -22,6 +23,7 @@ int main(int argc, char* argv[]) {
     int num_queries = 1000; // Number of queries to perform for measuring performance
     int key_size = 10;
     int value_size = 100;
+    std::string db_path = "../database/mlosDb";
 
     auto cli = (
         option("--N") & value("N", N),
@@ -29,7 +31,9 @@ int main(int argc, char* argv[]) {
         option("--non-empty-point-query-percentage") & value("non_empty_percentage", non_empty_point_query_percentage),
         option("--range-query-percentage") & value("range_percentage", range_query_percentage),
         option("--write-query-percentage") & value("write_percentage", write_query_percentage),
-        option("--num-queries") & value("num_queries", num_queries)
+        option("--num-queries") & value("num_queries", num_queries),
+        option("--db_path") & value("db_path", db_path)
+
     );
 
     if (!parse(argc, argv, cli)) {
@@ -58,21 +62,17 @@ int main(int argc, char* argv[]) {
 
      std::atomic<bool> shouldExit(false);
     // Start the parameter tuning thread
-    std::thread parameter_tuning_thread(TuneDBParameters,db, std::ref(shouldExit));
+    std::thread parameter_tuning_thread(TuneParameters,db, std::ref(shouldExit));
 
-    // Measure performance in the main thread
-    PerformanceMetrics metrics = MeasurePerformance(db, num_queries);
+    WorkloadGenerator* run_workload = new WorkloadGenerator(db);
+    for(int i=0;i<4;i++){
+        run_workload -> GenerateWorkload(empty_point_query_percentage*num_queries*0.25,
+        non_empty_point_query_percentage*num_queries*0.25,
+        range_query_percentage*num_queries*0.25, write_query_percentage*num_queries*0.25, key_file_path);
+    }
 
     // Wait for the parameter tuning thread to finish
     parameter_tuning_thread.join();
-
-    // Print the measured performance metrics
-    std::cout << "Point Query Latency: " << metrics.latency << " ms" << std::endl;
-    std::cout << "Point Query Throughput: " << metrics.throughput << " queries/second" << std::endl;
-    std::cout << "Disk Space Utilization: " << metrics.disk_space << " bytes" << std::endl;
-
-    // Close the database when done
-//    delete db;
 
     return 0;
 }
