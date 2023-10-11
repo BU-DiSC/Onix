@@ -2,18 +2,24 @@
 
 RandomGenerator::RandomGenerator() : generator(std::random_device{}()), distribution('A', 'Z') {}
 
-std::string RandomGenerator::gen_key(size_t keySize) {
+std::string RandomGenerator::gen_key(int keySize) {
     std::string key;
     for (int i = 0; i < keySize; i++) {
-        key += distribution(generator);
+        key += gen_char();
     }
     return key;
 }
 
 
-std::string RandomGenerator::gen_val(size_t value_size)
+std::string RandomGenerator::gen_value(int value_size)
 {
-    std::string value = std::string(value_size, 'a');
-
+    std::string value;
+    for (int i = 0; i < value_size; i++) {
+        value += gen_char();
+    }
     return value;
+}
+
+char RandomGenerator::gen_char() {
+    return static_cast<char>(distribution(generator));
 }

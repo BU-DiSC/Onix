@@ -7,6 +7,7 @@
 #include "rocksdb/db.h"
 #include "rocksdb/options.h"
 #include <clipp.h>
+#include <fstream>
 
 
 using namespace std;
@@ -14,23 +15,27 @@ using namespace rocksdb;
 using namespace clipp;
 using namespace chrono;
 
-std::string key_file_path = "../database/keyfile.txt";
+extern std::string key_file_path;
+extern rocksdb::DB *db;
+DataGenerator::DataGenerator(rocksdb::DB *db1, std::string key_file_path) {
+    db = db1;
+}
 
-rocksdb::Status bulkLoader(int N, std::string path_to_db, int key_size, int value_size) {
+rocksdb::Status DataGenerator::bulkLoader(int N, int key_size, int value_size) {
 
-    Status status = DB::Open(options, dbPath, &db);
-    if (!status.ok()) {
-        cerr << "Failed to open or create the database: " << status.ToString() << endl;
-        return status;
-    }
     WriteBatch batch;
-    ofstream keyfile(key_file_path);
+    std::ofstream keyfile(key_file_path);
+    std::string key;
+    std::string value;
+    std::pair<std::string, std::string> kv_pair;
     for (size_t i = 0; i < N; i++) {
-        key,value = gen_kv_pair(key_size, value_size);
+        kv_pair = DataGenerator::gen_kv_pair(key_size, value_size);
+        key = kv_pair.first;
+        value = kv_pair.second;
         keyfile << key << '\n';
         batch.Put(key, value);
     }
-    status = db->Write(WriteOptions(), &batch);
+    rocksdb::Status status = db->Write(WriteOptions(), &batch);
     if (!status.ok()) {
         cerr << "Failed to perform bulk load: " << status.ToString() << endl;
     }
@@ -38,11 +43,11 @@ rocksdb::Status bulkLoader(int N, std::string path_to_db, int key_size, int valu
     return status;
 }
 
-std::pair<std::string, std::string> gen_kv_pair(int key_size, int value_size)
+std::pair<std::string, std::string> DataGenerator::gen_kv_pair(int key_size, int value_size)
 {
     RandomGenerator *random_generator = new RandomGenerator();
     std::string key = random_generator -> gen_key(key_size);
-    std::string value = gen_value(value_size);
+    std::string value = random_generator -> gen_value(value_size);
 
     return std::pair<std::string, std::string>(key, value);
 }

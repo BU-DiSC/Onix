@@ -53,7 +53,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    DataGenerator *prePopulater = new DataGenerator(db_path);
+    DataGenerator *prePopulater = new DataGenerator(db,key_file_path);
     status = prePopulater->bulkLoader(N, key_size, value_size);
     if (!status.ok()) {
             std::cerr << "Failed to bulk load database: " << status.ToString() << std::endl;
@@ -61,8 +61,10 @@ int main(int argc, char* argv[]) {
     }
 
      std::atomic<bool> shouldExit(false);
+     TuneParameters t(db);
+
     // Start the parameter tuning thread
-    std::thread parameter_tuning_thread(TuneParameters,db, std::ref(shouldExit));
+    std::thread parameter_tuning_thread(&TuneParameters::tune_parameters,&t,std::ref(shouldExit));
 
     WorkloadGenerator* run_workload = new WorkloadGenerator(db);
     for(int i=0;i<4;i++){
@@ -71,7 +73,6 @@ int main(int argc, char* argv[]) {
         range_query_percentage*num_queries*0.25, write_query_percentage*num_queries*0.25, key_file_path);
     }
 
-    // Wait for the parameter tuning thread to finish
     parameter_tuning_thread.join();
 
     return 0;

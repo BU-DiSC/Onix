@@ -4,6 +4,10 @@
 #include "rocksdb/db.h"
 #include <atomic>
 
-void TuneParameters(rocksdb::DB* db, std::atomic<bool>& shouldExit);
+class TuneParameters {
+public:
+    TuneParameters(rocksdb::DB * db);
+    void tune_parameters(std::atomic<bool>& shouldExit);
+};
 
 #endif // TUNING_PARAMS_H

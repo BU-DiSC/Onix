@@ -7,14 +7,13 @@
 
 class DataGenerator {
 public:
-    DataGenerator(const std::string& path_to_db);
+    DataGenerator(rocksdb::DB *db, std::string key_file_path);
 
     rocksdb::Status bulkLoader(int N, int key_size, int value_size);
 
-    std::pair<std::string, std::string> gen_kv_pair();
+    std::pair<std::string, std::string> gen_kv_pair(int key_size,int value_size);
 
 private:
-    rocksdb::DB* db;
     rocksdb::Options options;
     std::string key_file_path;
 };
