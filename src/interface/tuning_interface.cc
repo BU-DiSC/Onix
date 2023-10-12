@@ -40,7 +40,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    rocksdb::DB* db;
+    rocksdb::DB* db = nullptr;
     rocksdb::Options options;
     options.create_if_missing = true;
 
@@ -60,10 +60,10 @@ int main(int argc, char* argv[]) {
     }
 
      std::atomic<bool> shouldExit(false);
-     TuneParameters t(db);
+//     TuneParameters t(db);
 
     // Start the parameter tuning thread
-    std::thread parameter_tuning_thread(&TuneParameters::tune_parameters,&t,std::ref(shouldExit));
+//    std::thread parameter_tuning_thread(&TuneParameters::tune_parameters,&t,std::ref(shouldExit));
 
     WorkloadGenerator* run_workload = new WorkloadGenerator(db);
     for(int i=0;i<4;i++){
@@ -72,7 +72,7 @@ int main(int argc, char* argv[]) {
         range_query_percentage*num_queries*0.25, write_query_percentage*num_queries*0.25, key_file_path);
     }
 
-    parameter_tuning_thread.join();
+//    parameter_tuning_thread.join();
 
     return 0;
 }

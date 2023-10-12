@@ -1,4 +1,5 @@
 #include "random_generator.hpp"
+#include "spdlog/spdlog.h"
 
 RandomGenerator::RandomGenerator() : generator(std::random_device{}()), distribution('A', 'Z') {}
 
@@ -7,6 +8,7 @@ std::string RandomGenerator::gen_key(int keySize) {
     for (int i = 0; i < keySize; i++) {
         key += gen_char();
     }
+//    spdlog::info("{} genertaed key",key);
     return key;
 }
 
