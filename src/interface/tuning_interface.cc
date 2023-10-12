@@ -10,7 +10,7 @@
 #include "TuningParams.hpp"
 #include "workload_generator.hpp"
 
-std::string key_file_path =  "../../database/keyfile.txt";
+std::string key_file_path =  "database/keyfile.txt";
 int main(int argc, char* argv[]) {
     using namespace clipp;
 
