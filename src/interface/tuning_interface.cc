@@ -1,17 +1,16 @@
-#include <rocksdb/utilities/options_util.h>
 #include <iostream>
 #include <chrono>
 #include <thread>
 #include <atomic>
 #include <future>
 #include "clipp.h"
-#include "../data/data_generator.hpp"
+#include "data_generator.hpp"
 #include "rocksdb/db.h"
 #include "rocksdb/options.h"
-#include "../tuning/TuningParams.hpp"
-#include "../data/workload_generator.hpp"
+#include "TuningParams.hpp"
+#include "workload_generator.hpp"
 
-std::string key_file_path =  "../database/keyfile.txt";
+std::string key_file_path =  "../../database/keyfile.txt";
 int main(int argc, char* argv[]) {
     using namespace clipp;
 
@@ -23,7 +22,7 @@ int main(int argc, char* argv[]) {
     int num_queries = 1000; // Number of queries to perform for measuring performance
     int key_size = 10;
     int value_size = 100;
-    std::string db_path = "../database/mlosDb";
+    std::string db_path = "database/mlosDb";
 
     auto cli = (
         option("--N") & value("N", N),

@@ -17,13 +17,13 @@
 #include <string>
 #include <cstdlib>
 #include <algorithm>
-//#include "spdlog.h"
+#include "spdlog/spdlog.h"
 #include "zipf.hpp"
 
 
 int key_size=10;
 int value_size=100;
-std::string performance_metrics_file_path = "../performance/performance_metrics.csv";
+std::string performance_metrics_file_path = "performance/performance_metrics.csv";
 extern rocksdb::DB *db;
 #define PAGESIZE 4096
 
@@ -102,7 +102,7 @@ void WorkloadGenerator::GenerateWorkload(
 
 std::vector<std::string> WorkloadGenerator::get_all_valid_keys(std::string key_file_path)
 {
-    //spdlog::debug("Grabbing existing keys");
+    spdlog::debug("Grabbing existing keys");
     std::vector<std::string> existing_keys;
     std::string key;
     std::ifstream key_file(key_file_path);
@@ -123,7 +123,7 @@ std::vector<std::string> WorkloadGenerator::get_all_valid_keys(std::string key_f
 
 void WorkloadGenerator::append_valid_keys(std::string key_file_path, std::vector<std::string> & new_keys)
 {
-    //spdlog::debug("Adding new keys to existing key file");
+    spdlog::debug("Adding new keys to existing key file");
     std::ofstream key_file;
 
     key_file.open(key_file_path, std::ios::app);
@@ -139,7 +139,7 @@ void WorkloadGenerator::append_valid_keys(std::string key_file_path, std::vector
 
 int WorkloadGenerator::run_random_non_empty_reads(std::vector<std::string> existing_keys, rocksdb::DB * db, int num_queries)
 {
-    //spdlog::info("{} Non-Empty Reads", num_queries);
+    spdlog::info("{} Non-Empty Reads", num_queries);
     rocksdb::Status status;
 
     std::string value;
@@ -152,7 +152,7 @@ int WorkloadGenerator::run_random_non_empty_reads(std::vector<std::string> exist
     }
     auto non_empty_read_end = std::chrono::high_resolution_clock::now();
     auto non_empty_read_duration = std::chrono::duration_cast<std::chrono::milliseconds>(non_empty_read_end - non_empty_read_start);
-    //spdlog::info("Non empty read time elapsed : {} ms", non_empty_read_duration.count());
+    spdlog::info("Non empty read time elapsed : {} ms", non_empty_read_duration.count());
 
     return non_empty_read_duration.count();
 }
@@ -174,7 +174,7 @@ std::vector<std::string> WorkloadGenerator::generate_empty_keys(std::vector<std:
 
 int WorkloadGenerator::run_random_empty_reads(std::vector<std::string> existing_keys, rocksdb::DB * db, int num_queries)
 {
-    //spdlog::info("{} Empty Reads", num_queries);
+    spdlog::info("{} Empty Reads", num_queries);
     rocksdb::Status status;
 
     std::string value;
@@ -188,7 +188,7 @@ int WorkloadGenerator::run_random_empty_reads(std::vector<std::string> existing_
     }
     auto empty_read_end = std::chrono::high_resolution_clock::now();
     auto empty_read_duration = std::chrono::duration_cast<std::chrono::milliseconds>(empty_read_end - empty_read_start);
-    //spdlog::info("Empty read time elapsed : {} ms", empty_read_duration.count());
+    spdlog::info("Empty read time elapsed : {} ms", empty_read_duration.count());
 
     return empty_read_duration.count();
 }
@@ -196,7 +196,7 @@ int WorkloadGenerator::run_random_empty_reads(std::vector<std::string> existing_
 
 int WorkloadGenerator::run_range_reads(std::vector<std::string> existing_keys, rocksdb::DB * db, int num_queries)
 {
-    //spdlog::info("{} Range Queries", num_queries);
+    spdlog::info("{} Range Queries", num_queries);
     rocksdb::ReadOptions read_opt;
     rocksdb::Status status;
     std::string lower_key, upper_key;
@@ -229,8 +229,8 @@ int WorkloadGenerator::run_range_reads(std::vector<std::string> existing_keys, r
     }
     auto range_read_end = std::chrono::high_resolution_clock::now();
     auto range_read_duration = std::chrono::duration_cast<std::chrono::milliseconds>(range_read_end - range_read_start);
-    //spdlog::info("Range reads time elapsed : {} ms", range_read_duration.count());
-    //spdlog::trace("Valid Keys {}", valid_keys);
+    spdlog::info("Range reads time elapsed : {} ms", range_read_duration.count());
+    spdlog::trace("Valid Keys {}", valid_keys);
 
     return range_read_duration.count();
 }
@@ -239,7 +239,7 @@ int WorkloadGenerator::run_range_reads(std::vector<std::string> existing_keys, r
 
 int WorkloadGenerator::run_random_inserts(std::string key_file_path, rocksdb::DB * db, int num_queries)
 {
-    //spdlog::info("{} Write Queries", num_queries);
+    spdlog::info("{} Write Queries", num_queries);
     rocksdb::WriteOptions write_opt;
     rocksdb::Status status;
     std::vector<std::string> new_keys;
@@ -248,7 +248,7 @@ int WorkloadGenerator::run_random_inserts(std::string key_file_path, rocksdb::DB
     int max_writes_failed = num_queries * 0.1;
     int writes_failed = 0;
 
-    //spdlog::debug("Writing {} key-value pairs", num_queries);
+    spdlog::debug("Writing {} key-value pairs", num_queries);
     DataGenerator data_gen(db,key_file_path);
     auto start_write_time = std::chrono::high_resolution_clock::now();
     for (size_t write_idx = 0; write_idx < num_queries; write_idx++)
@@ -258,12 +258,12 @@ int WorkloadGenerator::run_random_inserts(std::string key_file_path, rocksdb::DB
         status = db->Put(write_opt, entry.first, entry.second);
         if (!status.ok())
         {
-            //spdlog::warn("Unable to put key {}", write_idx);
-            //spdlog::error("{}", status.ToString());
+            spdlog::warn("Unable to put key {}", write_idx);
+            spdlog::error("{}", status.ToString());
             writes_failed++;
             if (writes_failed > max_writes_failed)
             {
-                //spdlog::error("10\% of total writes have failed, aborting");
+                spdlog::error("10\% of total writes have failed, aborting");
                 db->Close();
                 delete db;
                 exit(EXIT_FAILURE);
@@ -273,7 +273,7 @@ int WorkloadGenerator::run_random_inserts(std::string key_file_path, rocksdb::DB
     auto end_write_time = std::chrono::high_resolution_clock::now();
     auto write_duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_write_time - start_write_time);
 
-    //spdlog::debug("Flushing DB...");
+    spdlog::debug("Flushing DB...");
     rocksdb::FlushOptions flush_opt;
     flush_opt.wait = true;
     flush_opt.allow_write_stall = true;

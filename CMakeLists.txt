@@ -1,81 +1,84 @@
 cmake_minimum_required(VERSION 3.16)
-project(MyProject)
-
-# Set C++ standard to C++17
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-# Add the path to your own modules
-set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
-set(LZ4_DIR "/opt/homebrew/Cellar/lz4")
-
-
+project(mlos VERSION 1.0
+                       LANGUAGES CXX
+)
 
 include(ExternalProject)
+message(STATUS "CXX : ${CMAKE_CXX_COMPILER}")
 
-# Define the rocksdb_static_lib as an external project
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+
+# =====================================================================================================================
+# HEADER RocksDB
+# =====================================================================================================================
+
 ExternalProject_Add(rocksdb_static_lib
-    SOURCE_DIR "${PROJECT_SOURCE_DIR}/rocksdb"
+    SOURCE_DIR "${PROJECT_SOURCE_DIR}/libraries/rocksdb"
     INSTALL_COMMAND ""
     CONFIGURE_COMMAND ""
     USES_TERMINAL_CONFIGURE 1
-    BUILD_COMMAND $(MAKE) -C ${PROJECT_SOURCE_DIR}/rocksdb DISABLE_WARNING_AS_ERROR=true static_lib
+    BUILD_COMMAND $(MAKE) -C ${PROJECT_SOURCE_DIR}/libraries/rocksdb DISABLE_WARNING_AS_ERROR=true static_lib
 )
 
-# Define rocksdb as an imported static library
 add_library(rocksdb STATIC IMPORTED)
 add_dependencies(rocksdb rocksdb_static_lib)
-set_target_properties(rocksdb PROPERTIES IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/rocksdb/librocksdb.a)
-target_include_directories(rocksdb INTERFACE "${PROJECT_SOURCE_DIR}/rocksdb/include")
+set_target_properties(rocksdb PROPERTIES IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/libraries/rocksdb/librocksdb.a)
+target_include_directories(rocksdb INTERFACE "${PROJECT_SOURCE_DIR}/libraries/rocksdb/include")
 
-
-add_subdirectory(${PROJECT_SOURCE_DIR}/spdlog)
-
-# Find the required packages
-find_package(Threads REQUIRED)
+# =====================================================================================================================
+# HEADER Dependencies
+# =====================================================================================================================
 find_package(ZLIB REQUIRED)
 find_package(BZip2 REQUIRED)
-# find_package(LZ4 REQUIRED)
-# find_package(ZSTD REQUIRED)
-
-# Find and configure RocksDB
-# find_package(RocksDB REQUIRED)
-
-# Include directories for your project
-include_directories(
-    ${CMAKE_SOURCE_DIR}/clipp/include
-    ${CMAKE_SOURCE_DIR}/rocksdb/include
-    ${CMAKE_SOURCE_DIR}/data
-    ${CMAKE_SOURCE_DIR}/interface
-    ${CMAKE_SOURCE_DIR}/tuning
-)
-
-# List your source files
-set(SOURCES
-    data/data_generator.cc
-    data/random_generator.cc
-    data/workload_generator.cc
-    tuning/TuningParams.cc
-    interface/tuning_interface.cc
-)
-
-# Create the executable
-add_executable(rocksdb_performance ${SOURCES})
-target_include_directories(rocksdb_performance PRIVATE /usr/local/include)
-# Link required libraries
-target_link_libraries(rocksdb_performance
+find_package(LZ4 REQUIRED)
+find_package(Threads REQUIRED)
+# find_package(uring REQUIRED)
+find_package(zstd REQUIRED)
+find_package(snappy REQUIRED)
+target_link_libraries(rocksdb INTERFACE
+    BZip2::BZip2
+    LZ4::LZ4
     Threads::Threads
     ZLIB::ZLIB
-    BZip2::BZip2
-#     LZ4::LZ4
-#     ZSTD::ZSTD
-#     RocksDB::RocksDB
+    zstd::zstd
+    snappy::snappy
+#     uring::uring
+    ${CMAKE_DL_LIBS}
 )
 
-# target_link_libraries(database PUBLIC
-#     rocksdb
-#     spdlog
-# )
+add_subdirectory(${PROJECT_SOURCE_DIR}/libraries/spdlog)
+add_subdirectory(${PROJECT_SOURCE_DIR}/libraries/clipp)
 
-add_executable(tuning_interface ${CMAKE_SOURCE_DIR}/interface/tuning_interface.cc)
-target_link_libraries(tuning_interface database)
+
+# =====================================================================================================================
+# Tools
+# =====================================================================================================================
+
+file(GLOB_RECURSE
+    TOOLS_SRCS
+    CONFIGURE_DEPENDS
+    ${CMAKE_SOURCE_DIR}/src/data/*.cc
+    ${CMAKE_SOURCE_DIR}/src/data/*.cpp
+    ${CMAKE_SOURCE_DIR}/src/data/*.hpp
+    ${CMAKE_SOURCE_DIR}/src/tuning/*.cc
+    ${CMAKE_SOURCE_DIR}/src/tuning/*.cpp
+    ${CMAKE_SOURCE_DIR}/src/tuning/*.hpp
+)
+add_library(tools OBJECT ${TOOLS_SRCS})
+target_include_directories(tools PUBLIC
+    ${CMAKE_SOURCE_DIR}/src/data
+    ${CMAKE_SOURCE_DIR}/src/tuning
+)
+
+target_link_libraries(tools PUBLIC
+    rocksdb
+    spdlog
+    clipp
+)
+# Tools executables
+add_executable(tuning_interface ${CMAKE_SOURCE_DIR}/src/interface/tuning_interface.cc)
+target_link_libraries(tuning_interface tools)
+

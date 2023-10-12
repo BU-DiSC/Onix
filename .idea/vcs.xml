@@ -3,6 +3,9 @@
   <component name="VcsDirectoryMappings">
     <mapping directory="" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/clipp" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/libraries/clipp" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/libraries/rocksdb" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/libraries/spdlog" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/rocksdb" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/spdlog" vcs="Git" />
   </component>
