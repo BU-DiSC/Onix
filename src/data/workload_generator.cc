@@ -38,7 +38,7 @@ void WorkloadGenerator::GenerateWorkload(
     std::string key_file_path
 ) {
     //write performance metrics in a file
-    std::ofstream metricsFile(performance_metrics_file_path);
+    std::ofstream metricsFile(performance_metrics_file_path,std::ios::app);
         if (!metricsFile.is_open()) {
             std::cerr << "Failed to open metrics file for writing." << std::endl;
             return;
@@ -77,11 +77,11 @@ void WorkloadGenerator::GenerateWorkload(
 
         if (writeQueries > 0)
         {
-            int write_duration = run_random_inserts(key_file_path, db, writeQueries);
+            write_duration = run_random_inserts(key_file_path, db, writeQueries);
         }
         std::string statistics = rocksdb_opt.statistics->ToString();
         std::string io_statistics = rocksdb::get_iostats_context()->ToString();
-        std::cout << statistics << std::endl;
+//        std::cout << statistics << std::endl;
         std::cout << io_statistics << std::endl;
 
         // Write metrics to the file
@@ -256,13 +256,14 @@ int WorkloadGenerator::run_random_inserts(std::string key_file_path, rocksdb::DB
     int writes_failed = 0;
 
     spdlog::debug("Writing {} key-value pairs", num_queries);
-    DataGenerator data_gen(db,key_file_path);
+    DataGenerator *data_gen = new DataGenerator(db,key_file_path);
     auto start_write_time = std::chrono::high_resolution_clock::now();
     for (size_t write_idx = 0; write_idx < num_queries; write_idx++)
     {
-        std::pair<std::string, std::string> entry = data_gen.gen_kv_pair(key_size,value_size);
+        std::pair<std::string, std::string> entry = data_gen->gen_kv_pair(key_size,value_size);
         new_keys.push_back(entry.first);
         status = db->Put(write_opt, entry.first, entry.second);
+//        spdlog::info("written 1 value");
         if (!status.ok())
         {
             spdlog::warn("Unable to put key {}", write_idx);
@@ -279,7 +280,7 @@ int WorkloadGenerator::run_random_inserts(std::string key_file_path, rocksdb::DB
     }
     auto end_write_time = std::chrono::high_resolution_clock::now();
     auto write_duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_write_time - start_write_time);
-
+    spdlog::info("writes time elapsed : {} ms", write_duration.count());
     spdlog::debug("Flushing DB...");
     rocksdb::FlushOptions flush_opt;
     flush_opt.wait = true;
