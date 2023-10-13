@@ -71,7 +71,7 @@ int main(int argc, char* argv[]) {
         non_empty_point_query_percentage*num_queries*0.25,
         range_query_percentage*num_queries*0.25, write_query_percentage*num_queries*0.25, key_file_path);
     }
-
+    std::cout<<"Done"<<std::endl;
     parameter_tuning_thread.join();
 
     return 0;

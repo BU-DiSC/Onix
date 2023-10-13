@@ -87,12 +87,15 @@ void WorkloadGenerator::GenerateWorkload(
         // Write metrics to the file
         //format of metrics - empty reads duration, non-empty reads duration, range query duration, write duration, statistics, io_statistics
         //duration is in ms
-        metricsFile << "Empty Reads Duration:" << empty_read_duration << ","
-                    << "Read Duration:" << read_duration << ","
-                    << "Range Reads Duration:" << range_duration << ","
-                    << "Write Duration:" << write_duration <<std::endl;
+//        metricsFile << empty_read_duration << ","
+//                    << read_duration << ","
+//                    << range_duration << ","
+//                    << write_duration <<std::endl;
 //                    << "IO Statistics:" << io_statistics << std::endl;
-
+        metricsFile << "Empty Reads Duration:" << empty_read_duration << ","
+                            << "Read Duration:" << read_duration << ","
+                            << "Range Reads Duration:" << range_duration << ","
+                            << "Write Duration:" << write_duration <<std::endl;
         // Close the metrics file
         metricsFile.close();
        return;
