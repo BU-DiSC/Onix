@@ -17,7 +17,7 @@ using namespace clipp;
 using namespace chrono;
 
 extern std::string key_file_path;
-extern rocksdb::DB *db;
+extern rocksdb::DB* db;
 DataGenerator::DataGenerator(rocksdb::DB *db1, std::string key_file_path1) {
     db = db1;
     key_file_path = key_file_path1;
