@@ -4,18 +4,18 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="10f5e330-982b-495b-a25c-93a1a2c610f3" name="Changes" comment="cmake">
-      <change afterPath="$PROJECT_DIR$/libraries/spdlog/build/CPackConfig.cmake" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/libraries/spdlog/build/CPackSourceConfig.cmake" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/libraries/spdlog/build/spdlog.pc" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/libraries/spdlog/build/spdlogConfigTargets.cmake" afterDir="false" />
+    <list default="true" id="10f5e330-982b-495b-a25c-93a1a2c610f3" name="Changes" comment="shared memory">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeLists.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cmake/FindBoost.cmake" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/libraries/spdlog" beforeDir="false" afterPath="$PROJECT_DIR$/libraries/spdlog" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/libraries/spdlog/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/libraries/spdlog/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/data/data_generator.cc" beforeDir="false" afterPath="$PROJECT_DIR$/src/data/data_generator.cc" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/data/random_generator.cc" beforeDir="false" afterPath="$PROJECT_DIR$/src/data/random_generator.cc" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/data/workload_generator.cc" beforeDir="false" afterPath="$PROJECT_DIR$/src/data/workload_generator.cc" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/data/workload_generator.hpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/data/workload_generator.hpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/db_manager/db_manager.cc" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/db_manager/db_manager.hpp" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/src/interface/tuning_interface.cc" beforeDir="false" afterPath="$PROJECT_DIR$/src/interface/tuning_interface.cc" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/tuning/TuningParams.cc" beforeDir="false" afterPath="$PROJECT_DIR$/src/tuning/TuningParams.cc" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/tuning/TuningParams.hpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/tuning/TuningParams.hpp" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -42,24 +42,24 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.go.format.on.save.advertiser.fired": "true",
-    "RunOnceActivity.go.formatter.settings.were.checked": "true",
-    "RunOnceActivity.go.migrated.go.modules.settings": "true",
-    "WebServerToolWindowFactoryState": "false",
-    "go.import.settings.migrated": "true",
-    "go.sdk.automatically.set": "true",
-    "last_opened_file_path": "/Users/sakshi/Desktop/Sakshi/Boston_University/DISC/mlos/MLOS/libraries",
-    "nodejs_package_manager_path": "npm",
-    "project.structure.last.edited": "Libraries",
-    "project.structure.proportion": "0.0",
-    "project.structure.side.proportion": "0.2",
-    "settings.editor.selected.configurable": "configurable.group.appearance"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.go.format.on.save.advertiser.fired&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.go.formatter.settings.were.checked&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.go.migrated.go.modules.settings&quot;: &quot;true&quot;,
+    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
+    &quot;go.import.settings.migrated&quot;: &quot;true&quot;,
+    &quot;go.sdk.automatically.set&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/sakshi/Desktop/Sakshi/Boston_University/DISC/mlos/MLOS/libraries&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Libraries&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.0&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;configurable.group.appearance&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/libraries" />
@@ -68,8 +68,9 @@
       <recent name="$PROJECT_DIR$/data" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
-      <recent name="$PROJECT_DIR$/src/data" />
+      <recent name="$PROJECT_DIR$/src/db_manager" />
       <recent name="$PROJECT_DIR$/src" />
+      <recent name="$PROJECT_DIR$/src/data" />
       <recent name="$PROJECT_DIR$/libraries" />
     </key>
   </component>
@@ -97,7 +98,11 @@
       <workItem from="1697004900166" duration="7432000" />
       <workItem from="1697037300749" duration="6061000" />
       <workItem from="1697065600338" duration="38000" />
-      <workItem from="1697066444384" duration="17196000" />
+      <workItem from="1697066444384" duration="34649000" />
+      <workItem from="1697514849927" duration="13826000" />
+      <workItem from="1697600686517" duration="7743000" />
+      <workItem from="1697920480774" duration="40808000" />
+      <workItem from="1698387287143" duration="6259000" />
     </task>
     <task id="LOCAL-00001" summary="adding rocksdb files">
       <created>1694582702807</created>
@@ -155,7 +160,42 @@
       <option name="project" value="LOCAL" />
       <updated>1697084794782</updated>
     </task>
-    <option name="localTasksCounter" value="9" />
+    <task id="LOCAL-00009" summary="cmake issues resolved">
+      <created>1697087888270</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1697087888271</updated>
+    </task>
+    <task id="LOCAL-00010" summary="tuning interface">
+      <created>1697170265085</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1697170265085</updated>
+    </task>
+    <task id="LOCAL-00011" summary="tuning interface">
+      <created>1697179382830</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1697179382830</updated>
+    </task>
+    <task id="LOCAL-00012" summary="live graph">
+      <created>1697179422060</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1697179422060</updated>
+    </task>
+    <task id="LOCAL-00013" summary="shared memory">
+      <created>1698215795753</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1698215795754</updated>
+    </task>
+    <option name="localTasksCounter" value="14" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -177,7 +217,11 @@
     <MESSAGE value="adding basic pipeline files&#10;- pre-populate database &#10;- generate workload&#10;- interface&#10;- performance metrics" />
     <MESSAGE value="adding basic pipeline files&#10; - live graphs &#10; - async thread for tuning params" />
     <MESSAGE value="cmake" />
-    <option name="LAST_COMMIT_MESSAGE" value="cmake" />
+    <MESSAGE value="cmake issues resolved" />
+    <MESSAGE value="tuning interface" />
+    <MESSAGE value="live graph" />
+    <MESSAGE value="shared memory" />
+    <option name="LAST_COMMIT_MESSAGE" value="shared memory" />
   </component>
   <component name="VgoProject">
     <settings-migrated>true</settings-migrated>

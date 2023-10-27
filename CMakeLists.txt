@@ -38,7 +38,6 @@ find_package(Threads REQUIRED)
 # find_package(uring REQUIRED)
 find_package(zstd REQUIRED)
 find_package(snappy REQUIRED)
-find_package(Boost REQUIRED)
 target_link_libraries(rocksdb INTERFACE
     BZip2::BZip2
     LZ4::LZ4
@@ -47,36 +46,13 @@ target_link_libraries(rocksdb INTERFACE
     zstd::zstd
     snappy::snappy
 #     uring::uring
-    boost:boost
     ${CMAKE_DL_LIBS}
 )
 include_directories(${Boost_INCLUDE_DIRS})
 add_subdirectory(${PROJECT_SOURCE_DIR}/libraries/spdlog)
 add_subdirectory(${PROJECT_SOURCE_DIR}/libraries/clipp)
 
-# =====================================================================================================================
-# HEADER DB Manager
-# =====================================================================================================================
-file(GLOB_RECURSE
-    TEMPDB_SRCS
-    CONFIGURE_DEPENDS
-#     ${CMAKE_SOURCE_DIR}/src/*.cc
-#     ${CMAKE_SOURCE_DIR}/src/*.cpp
-    ${CMAKE_SOURCE_DIR}/src/db_manager/*.hpp
-    ${CMAKE_SOURCE_DIR}/src/db_manager/*.cc
-    ${CMAKE_SOURCE_DIR}/src/db_manager/*.cpp
-)
-add_library(tempdb OBJECT ${TEMPDB_SRCS})
-target_include_directories(tempdb PUBLIC
-    ${CMAKE_SOURCE_DIR}/src/db_manager
-)
 
-target_link_libraries(tempdb PUBLIC
-    rocksdb
-    spdlog
-    clipp
-    boost
-)
 # =====================================================================================================================
 # Tools
 # =====================================================================================================================
@@ -87,24 +63,21 @@ file(GLOB_RECURSE
     ${CMAKE_SOURCE_DIR}/src/data/*.cc
     ${CMAKE_SOURCE_DIR}/src/data/*.cpp
     ${CMAKE_SOURCE_DIR}/src/data/*.hpp
-#     ${CMAKE_SOURCE_DIR}/src/tuning/*.cc
-#     ${CMAKE_SOURCE_DIR}/src/tuning/*.hpp
+    ${CMAKE_SOURCE_DIR}/src/tuning/*.cc
+    ${CMAKE_SOURCE_DIR}/src/tuning/*.cpp
+    ${CMAKE_SOURCE_DIR}/src/tuning/*.hpp
 )
 add_library(tools OBJECT ${TOOLS_SRCS})
 target_include_directories(tools PUBLIC
     ${CMAKE_SOURCE_DIR}/src/data
-#     ${CMAKE_SOURCE_DIR}/src/tuning
+    ${CMAKE_SOURCE_DIR}/src/tuning
 )
 
 target_link_libraries(tools PUBLIC
     rocksdb
     spdlog
     clipp
-    boost
 )
 # Tools executables
 add_executable(tuning_interface ${CMAKE_SOURCE_DIR}/src/interface/tuning_interface.cc)
-target_link_libraries(tuning_interface tempdb tools ${Boost_LIBRARIES} )
-
-add_executable(tuning_params ${CMAKE_SOURCE_DIR}/src/tuning/TuningParams.cc)
-target_link_libraries(tuning_params tempdb)
+target_link_libraries(tuning_interface tools)

@@ -10,14 +10,16 @@
 #include "zipf.hpp"
 #include "data_generator.hpp"
 #include "rocksdb/statistics.h"
-
+#include "spdlog/spdlog.h"
+#include "spdlog/sinks/basic_file_sink.h"
+#include "spdlog/async.h"
 #include <clipp.h>
 #include <iostream>
 #include <fstream>
 #include <string>
 #include <cstdlib>
 #include <algorithm>
-#include "spdlog/spdlog.h"
+
 #include "zipf.hpp"
 
 
@@ -26,6 +28,7 @@ int value_size=100;
 std::string performance_metrics_file_path = "performance/performance_metrics.csv";
 extern rocksdb::DB *db;
 #define PAGESIZE 4096
+extern std::shared_ptr<spdlog::logger> workloadLoggerThread;
 
 WorkloadGenerator::WorkloadGenerator(rocksdb::DB *db1){
     db=db1;
@@ -35,12 +38,13 @@ void WorkloadGenerator::GenerateWorkload(
     double nonEmptyPointQueries,
     double rangeQueries,
     double writeQueries,
+    double updateQueries,
     std::string key_file_path
 ) {
     //write performance metrics in a file
     std::ofstream metricsFile(performance_metrics_file_path,std::ios::app);
         if (!metricsFile.is_open()) {
-            std::cerr << "Failed to open metrics file for writing." << std::endl;
+            workloadLoggerThread->debug("Failed to open metrics file for writing.");
             return;
         }
 
@@ -79,10 +83,14 @@ void WorkloadGenerator::GenerateWorkload(
         {
             write_duration = run_random_inserts(key_file_path, db, writeQueries);
         }
+        else if (updateQueries > 0)
+        {
+            write_duration = run_random_updates(existing_keys,key_file_path, db, updateQueries);
+        }
         std::string statistics = rocksdb_opt.statistics->ToString();
         std::string io_statistics = rocksdb::get_iostats_context()->ToString();
 //        std::cout << statistics << std::endl;
-        std::cout << io_statistics << std::endl;
+//        std::cout << io_statistics << std::endl;
 
         // Write metrics to the file
         //format of metrics - empty reads duration, non-empty reads duration, range query duration, write duration, statistics, io_statistics
@@ -104,7 +112,7 @@ void WorkloadGenerator::GenerateWorkload(
 
 std::vector<std::string> WorkloadGenerator::get_all_valid_keys(std::string key_file_path)
 {
-    spdlog::debug("Grabbing existing keys");
+    workloadLoggerThread->debug("Grabbing existing keys");
     std::vector<std::string> existing_keys;
     std::string key;
     std::ifstream key_file(key_file_path);
@@ -125,7 +133,7 @@ std::vector<std::string> WorkloadGenerator::get_all_valid_keys(std::string key_f
 
 void WorkloadGenerator::append_valid_keys(std::string key_file_path, std::vector<std::string> & new_keys)
 {
-    spdlog::debug("Adding new keys to existing key file");
+    workloadLoggerThread->debug("Adding new keys to existing key file");
     std::ofstream key_file;
 
     key_file.open(key_file_path, std::ios::app);
@@ -141,25 +149,25 @@ void WorkloadGenerator::append_valid_keys(std::string key_file_path, std::vector
 
 int WorkloadGenerator::run_random_non_empty_reads(std::vector<std::string> existing_keys, rocksdb::DB * db, int num_queries)
 {
-    spdlog::info("{} Non-Empty Reads", num_queries);
+    workloadLoggerThread->info("{} Non-Empty Reads", num_queries);
     rocksdb::Status status;
 
     std::string value;
-//    spdlog::info("printing existing keys");
+//    workloadLoggerThread->info("printing existing keys");
 //    for (const std::string& key : existing_keys) {
-//            spdlog::info("{} key", key);
+//            workloadLoggerThread->info("{} key", key);
 //        }
     auto non_empty_read_start = std::chrono::high_resolution_clock::now();
     for (size_t read_count = 0; read_count < num_queries; read_count++)
     {
         int randomIndex = rand() % existing_keys.size();
-//        spdlog::info("{} existing key",  existing_keys[randomIndex]);
+//        workloadLoggerThread->info("{} existing key",  existing_keys[randomIndex]);
         status = db->Get(rocksdb::ReadOptions(), existing_keys[randomIndex], &value);
-//        spdlog::info("1 non empty read complete");
+//        workloadLoggerThread->info("1 non empty read complete");
     }
     auto non_empty_read_end = std::chrono::high_resolution_clock::now();
     auto non_empty_read_duration = std::chrono::duration_cast<std::chrono::milliseconds>(non_empty_read_end - non_empty_read_start);
-    spdlog::info("Non empty read time elapsed : {} ms", non_empty_read_duration.count());
+    workloadLoggerThread->info("Non empty read time elapsed : {} ms", non_empty_read_duration.count());
 
     return non_empty_read_duration.count();
 }
@@ -169,13 +177,13 @@ std::vector<std::string> WorkloadGenerator::generate_empty_keys(std::vector<std:
     std::string key;
     int ct=0;
     std::vector<std::string> empty_keys;
-//    spdlog::info("generating empty keys");
+//    workloadLoggerThread->info("generating empty keys");
     while(ct<num_queries){
         key = randomGenerator->gen_key(key_size);
         if (std::find(existing_keys.begin(), existing_keys.end(), key) == existing_keys.end()) {
             empty_keys.push_back(key);
             ct++;
-//            spdlog::info("generated 1 empty key");
+//            workloadLoggerThread->info("generated 1 empty key");
         }
     }
     return empty_keys;
@@ -183,22 +191,22 @@ std::vector<std::string> WorkloadGenerator::generate_empty_keys(std::vector<std:
 
 int WorkloadGenerator::run_random_empty_reads(std::vector<std::string> existing_keys, rocksdb::DB * db, int num_queries)
 {
-    spdlog::info("{} Empty Reads", num_queries);
+    workloadLoggerThread->info("{} Empty Reads", num_queries);
     rocksdb::Status status;
 
     std::string value;
 
     std::vector<std::string> empty_keys = WorkloadGenerator::generate_empty_keys(existing_keys, num_queries);
-//    spdlog::info("starting empty reads");
+//    workloadLoggerThread->info("starting empty reads");
     auto empty_read_start = std::chrono::high_resolution_clock::now();
     for (size_t read_count = 0; read_count < num_queries; read_count++)
     {
         status = db->Get(rocksdb::ReadOptions(), empty_keys[read_count], &value);
-//        spdlog::info("one empty read completed");
+//        workloadLoggerThread->info("one empty read completed");
     }
     auto empty_read_end = std::chrono::high_resolution_clock::now();
     auto empty_read_duration = std::chrono::duration_cast<std::chrono::milliseconds>(empty_read_end - empty_read_start);
-    spdlog::info("Empty read time elapsed : {} ms", empty_read_duration.count());
+    workloadLoggerThread->info("Empty read time elapsed : {} ms", empty_read_duration.count());
 
     return empty_read_duration.count();
 }
@@ -206,7 +214,7 @@ int WorkloadGenerator::run_random_empty_reads(std::vector<std::string> existing_
 
 int WorkloadGenerator::run_range_reads(std::vector<std::string> existing_keys, rocksdb::DB * db, int num_queries)
 {
-    spdlog::info("{} Range Queries", num_queries);
+    workloadLoggerThread->info("{} Range Queries", num_queries);
     rocksdb::ReadOptions read_opt;
     rocksdb::Status status;
     std::string lower_key, upper_key;
@@ -239,8 +247,8 @@ int WorkloadGenerator::run_range_reads(std::vector<std::string> existing_keys, r
     }
     auto range_read_end = std::chrono::high_resolution_clock::now();
     auto range_read_duration = std::chrono::duration_cast<std::chrono::milliseconds>(range_read_end - range_read_start);
-    spdlog::info("Range reads time elapsed : {} ms", range_read_duration.count());
-    spdlog::trace("Valid Keys {}", valid_keys);
+    workloadLoggerThread->info("Range reads time elapsed : {} ms", range_read_duration.count());
+    workloadLoggerThread->trace("Valid Keys {}", valid_keys);
 
     return range_read_duration.count();
 }
@@ -249,7 +257,7 @@ int WorkloadGenerator::run_range_reads(std::vector<std::string> existing_keys, r
 
 int WorkloadGenerator::run_random_inserts(std::string key_file_path, rocksdb::DB * db, int num_queries)
 {
-    spdlog::info("{} Write Queries", num_queries);
+    workloadLoggerThread->info("{} Write Queries", num_queries);
     rocksdb::WriteOptions write_opt;
     rocksdb::Status status;
     std::vector<std::string> new_keys;
@@ -258,7 +266,7 @@ int WorkloadGenerator::run_random_inserts(std::string key_file_path, rocksdb::DB
     int max_writes_failed = num_queries * 0.1;
     int writes_failed = 0;
 
-    spdlog::debug("Writing {} key-value pairs", num_queries);
+    workloadLoggerThread->debug("Writing {} key-value pairs", num_queries);
     DataGenerator *data_gen = new DataGenerator(db,key_file_path);
     auto start_write_time = std::chrono::high_resolution_clock::now();
     for (size_t write_idx = 0; write_idx < num_queries; write_idx++)
@@ -266,15 +274,15 @@ int WorkloadGenerator::run_random_inserts(std::string key_file_path, rocksdb::DB
         std::pair<std::string, std::string> entry = data_gen->gen_kv_pair(key_size,value_size);
         new_keys.push_back(entry.first);
         status = db->Put(write_opt, entry.first, entry.second);
-//        spdlog::info("written 1 value");
+//        workloadLoggerThread->info("written 1 value");
         if (!status.ok())
         {
-            spdlog::warn("Unable to put key {}", write_idx);
-            spdlog::error("{}", status.ToString());
+            workloadLoggerThread->warn("Unable to put key {}", write_idx);
+            workloadLoggerThread->error("{}", status.ToString());
             writes_failed++;
             if (writes_failed > max_writes_failed)
             {
-                spdlog::error("10\% of total writes have failed, aborting");
+                workloadLoggerThread->error("10\% of total writes have failed, aborting");
                 db->Close();
                 delete db;
                 exit(EXIT_FAILURE);
@@ -283,8 +291,8 @@ int WorkloadGenerator::run_random_inserts(std::string key_file_path, rocksdb::DB
     }
     auto end_write_time = std::chrono::high_resolution_clock::now();
     auto write_duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_write_time - start_write_time);
-    spdlog::info("writes time elapsed : {} ms", write_duration.count());
-    spdlog::debug("Flushing DB...");
+    workloadLoggerThread->info("writes time elapsed : {} ms", write_duration.count());
+    workloadLoggerThread->debug("Flushing DB...");
     rocksdb::FlushOptions flush_opt;
     flush_opt.wait = true;
     flush_opt.allow_write_stall = true;
@@ -292,5 +300,50 @@ int WorkloadGenerator::run_random_inserts(std::string key_file_path, rocksdb::DB
     db->Flush(flush_opt);
     append_valid_keys(key_file_path, new_keys);
 
+    return write_duration.count();
+}
+
+int WorkloadGenerator::run_random_updates(std::vector<std::string> existing_keys,std::string key_file_path, rocksdb::DB * db, int num_queries)
+{
+    workloadLoggerThread->info("{} Write Queries", num_queries);
+    rocksdb::WriteOptions write_opt;
+    rocksdb::Status status;
+    write_opt.no_slowdown = false; //> enabling this will make some insertions fail
+
+    int max_writes_failed = num_queries * 0.1;
+    int writes_failed = 0;
+
+    workloadLoggerThread->debug("Writing {} key-value pairs", num_queries);
+    DataGenerator *data_gen = new DataGenerator(db,key_file_path);
+    auto start_write_time = std::chrono::high_resolution_clock::now();
+    for (size_t write_idx = 0; write_idx < num_queries; write_idx++)
+    {
+
+            int randomIndex = rand() % existing_keys.size();
+            std::pair<std::string, std::string> entry = data_gen->gen_kv_pair(key_size,value_size);
+            status = db->Put(write_opt, existing_keys[randomIndex], entry.second);
+        if (!status.ok())
+        {
+            workloadLoggerThread->warn("Unable to put key {}", write_idx);
+            workloadLoggerThread->error("{}", status.ToString());
+            writes_failed++;
+            if (writes_failed > max_writes_failed)
+            {
+                workloadLoggerThread->error("10\% of total writes have failed, aborting");
+                db->Close();
+                delete db;
+                exit(EXIT_FAILURE);
+            }
+        }
+    }
+    auto end_write_time = std::chrono::high_resolution_clock::now();
+    auto write_duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_write_time - start_write_time);
+    workloadLoggerThread->info("writes time elapsed : {} ms", write_duration.count());
+    workloadLoggerThread->debug("Flushing DB...");
+    rocksdb::FlushOptions flush_opt;
+    flush_opt.wait = true;
+    flush_opt.allow_write_stall = true;
+
+    db->Flush(flush_opt);
     return write_duration.count();
 }
