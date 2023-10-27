@@ -1,4 +1,3 @@
-#include <iostream>
 #include <chrono>
 #include <thread>
 #include <atomic>
@@ -21,18 +20,21 @@
 
 
 std::string key_file_path =  "database/keyfile.txt";
-std::shared_ptr<spdlog::logger> workloadLoggerThread;
-
+std::shared_ptr<spdlog::logger> workloadLoggerThread = nullptr;
+std::shared_ptr<spdlog::logger> tuningParamsLoggerThread = nullptr;
 int main(int argc, char * argv[]){
     using namespace clipp;
 
     try
             {
+
                 workloadLoggerThread = spdlog::basic_logger_mt("workloadLoggerThread", "logs/workloadLoggerThread.txt");
+                tuningParamsLoggerThread = spdlog::basic_logger_mt("tuningParamsLoggerThread", "logs/tuningParamsLoggerThread.txt");
+
             }
             catch (const spdlog::spdlog_ex &ex)
             {
-                std::cout << "Log init failed: " << ex.what() << std::endl;
+                spdlog::error("Workload Log init failed: {}",ex.what());
             }
 
     int N = 1000; // Number of records to prepopulate (adjust as needed)
@@ -57,7 +59,7 @@ int main(int argc, char * argv[]){
     );
 
     if (!parse(argc, argv, cli)) {
-        std::cerr << make_man_page(cli, argv[0]) << std::endl;
+//        spdlog::debug(make_man_page(cli, argv[0]));
         return 1;
     }
 
@@ -68,7 +70,7 @@ int main(int argc, char * argv[]){
     rocksdb::Status status = rocksdb::DB::Open(options, db_path, &db);
 
     if (!status.ok()) {
-        std::cerr << "Failed to open database: " << status.ToString() << std::endl;
+        spdlog::debug("Failed to open database: " + status.ToString() );
         spdlog::debug("Failed to open database: ",status.ToString());
         return 1;
     }

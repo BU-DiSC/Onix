@@ -14,7 +14,6 @@
 #include "spdlog/sinks/basic_file_sink.h"
 #include "spdlog/async.h"
 #include <clipp.h>
-#include <iostream>
 #include <fstream>
 #include <string>
 #include <cstdlib>
@@ -177,13 +176,11 @@ std::vector<std::string> WorkloadGenerator::generate_empty_keys(std::vector<std:
     std::string key;
     int ct=0;
     std::vector<std::string> empty_keys;
-//    workloadLoggerThread->info("generating empty keys");
     while(ct<num_queries){
         key = randomGenerator->gen_key(key_size);
         if (std::find(existing_keys.begin(), existing_keys.end(), key) == existing_keys.end()) {
             empty_keys.push_back(key);
             ct++;
-//            workloadLoggerThread->info("generated 1 empty key");
         }
     }
     return empty_keys;
@@ -197,12 +194,10 @@ int WorkloadGenerator::run_random_empty_reads(std::vector<std::string> existing_
     std::string value;
 
     std::vector<std::string> empty_keys = WorkloadGenerator::generate_empty_keys(existing_keys, num_queries);
-//    workloadLoggerThread->info("starting empty reads");
     auto empty_read_start = std::chrono::high_resolution_clock::now();
     for (size_t read_count = 0; read_count < num_queries; read_count++)
     {
         status = db->Get(rocksdb::ReadOptions(), empty_keys[read_count], &value);
-//        workloadLoggerThread->info("one empty read completed");
     }
     auto empty_read_end = std::chrono::high_resolution_clock::now();
     auto empty_read_duration = std::chrono::duration_cast<std::chrono::milliseconds>(empty_read_end - empty_read_start);
@@ -274,7 +269,6 @@ int WorkloadGenerator::run_random_inserts(std::string key_file_path, rocksdb::DB
         std::pair<std::string, std::string> entry = data_gen->gen_kv_pair(key_size,value_size);
         new_keys.push_back(entry.first);
         status = db->Put(write_opt, entry.first, entry.second);
-//        workloadLoggerThread->info("written 1 value");
         if (!status.ok())
         {
             workloadLoggerThread->warn("Unable to put key {}", write_idx);

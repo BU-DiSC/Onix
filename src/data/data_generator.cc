@@ -1,9 +1,7 @@
 #include "data_generator.hpp"
 #include "random_generator.hpp"
-#include <iostream>
 #include <chrono>
 #include <random>
-
 #include "rocksdb/db.h"
 #include "rocksdb/options.h"
 #include "spdlog/spdlog.h"
@@ -30,19 +28,17 @@ rocksdb::Status DataGenerator::bulkLoader(int N, int key_size, int value_size) {
     std::string key;
     std::string value;
     std::pair<std::string, std::string> kv_pair;
-//    spdlog::info("{} writing to keyfile", key_file_path);
     for (size_t i = 0; i < N; i++) {
         kv_pair = DataGenerator::gen_kv_pair(key_size, value_size);
         key = kv_pair.first;
         value = kv_pair.second;
-//        spdlog::info("{} writing to keyfile", key);
         keyfile << key << '\n';
         batch.Put(key, value);
     }
     rocksdb::Status status = db->Write(WriteOptions(), &batch);
     keyfile.close();
     if (!status.ok()) {
-        cerr << "Failed to perform bulk load: " << status.ToString() << endl;
+        spdlog::debug("Failed to perform bulk load: " + status.ToString());
     }
     keyfile.close();
     return status;

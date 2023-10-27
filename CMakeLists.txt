@@ -48,7 +48,6 @@ target_link_libraries(rocksdb INTERFACE
 #     uring::uring
     ${CMAKE_DL_LIBS}
 )
-include_directories(${Boost_INCLUDE_DIRS})
 add_subdirectory(${PROJECT_SOURCE_DIR}/libraries/spdlog)
 add_subdirectory(${PROJECT_SOURCE_DIR}/libraries/clipp)
 
