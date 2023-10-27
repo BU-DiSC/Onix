@@ -99,10 +99,11 @@ void WorkloadGenerator::GenerateWorkload(
 //                    << range_duration << ","
 //                    << write_duration <<std::endl;
 //                    << "IO Statistics:" << io_statistics << std::endl;
-        metricsFile << "Empty Reads Duration:" << empty_read_duration << ","
-                            << "Read Duration:" << read_duration << ","
-                            << "Range Reads Duration:" << range_duration << ","
-                            << "Write Duration:" << write_duration <<std::endl;
+        metricsFile << empty_read_duration << ","
+                    << read_duration << ","
+                    << range_duration << ","
+                    << write_duration << std::endl;
+
         // Close the metrics file
         metricsFile.close();
        return;
@@ -152,17 +153,12 @@ int WorkloadGenerator::run_random_non_empty_reads(std::vector<std::string> exist
     rocksdb::Status status;
 
     std::string value;
-//    workloadLoggerThread->info("printing existing keys");
-//    for (const std::string& key : existing_keys) {
-//            workloadLoggerThread->info("{} key", key);
-//        }
+
     auto non_empty_read_start = std::chrono::high_resolution_clock::now();
     for (size_t read_count = 0; read_count < num_queries; read_count++)
     {
         int randomIndex = rand() % existing_keys.size();
-//        workloadLoggerThread->info("{} existing key",  existing_keys[randomIndex]);
         status = db->Get(rocksdb::ReadOptions(), existing_keys[randomIndex], &value);
-//        workloadLoggerThread->info("1 non empty read complete");
     }
     auto non_empty_read_end = std::chrono::high_resolution_clock::now();
     auto non_empty_read_duration = std::chrono::duration_cast<std::chrono::milliseconds>(non_empty_read_end - non_empty_read_start);

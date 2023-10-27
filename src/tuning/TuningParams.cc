@@ -53,7 +53,4 @@ void TuneParameters::tune_parameters(std::atomic<bool>& shouldExit) {
 
                     close(pipe_fd);
                 }
-
-
-
 }

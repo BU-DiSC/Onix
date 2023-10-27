@@ -2,14 +2,17 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import collections
 
+
 def read_metrics(filename):
     metrics_dict = collections.defaultdict(list)
     with open(filename, 'r') as file:
         for line in file:
             parts = line.strip().split(',')
-            for part in parts:
-                key, value = part.split(':')
-                metrics_dict[key].append(int(value))
+            values = [int(part) for part in parts]
+            metrics_dict['Empty Reads Duration'].extend([values[0]])
+            metrics_dict['Read Duration'].extend([values[1]])
+            metrics_dict['Range Reads Duration'].extend([values[2]])
+            metrics_dict['Write Duration'].extend([values[3]])
     return metrics_dict
 
 
