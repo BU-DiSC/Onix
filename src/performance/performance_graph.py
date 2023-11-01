@@ -41,8 +41,7 @@ def update_graphs(i):
     update_graph(ax_write_queries, 'Write Queries', write_queries_values)
 
 
-fig, axs = plt.subplots(2, 2, figsize=(12, 8))
-plt.style.use('fivethirtyeight')
+fig, axs = plt.subplots(2, 2, figsize=(12, 6))
 ax_empty_reads, ax_non_empty_reads, ax_range_queries, ax_write_queries = axs.flatten()
 
 # Initialize empty lists to store metric values
