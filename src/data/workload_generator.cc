@@ -63,6 +63,14 @@ void WorkloadGenerator::GenerateWorkload(
         rocksdb_opt.statistics->Reset();
         rocksdb::get_iostats_context()->Reset();
         rocksdb::get_perf_context()->Reset();
+        if (writeQueries > 0)
+        {
+            write_duration = run_random_inserts(key_file_path, db, writeQueries);
+        }
+        else if (updateQueries > 0)
+        {
+            write_duration = run_random_updates(existing_keys,key_file_path, db, updateQueries);
+        }
         if (emptyPointQueries > 0)
         {
             empty_read_duration = run_random_empty_reads(existing_keys, db, emptyPointQueries);
@@ -78,14 +86,7 @@ void WorkloadGenerator::GenerateWorkload(
             range_duration = run_range_reads(existing_keys, db, rangeQueries);
         }
 
-        if (writeQueries > 0)
-        {
-            write_duration = run_random_inserts(key_file_path, db, writeQueries);
-        }
-        else if (updateQueries > 0)
-        {
-            write_duration = run_random_updates(existing_keys,key_file_path, db, updateQueries);
-        }
+
         std::string statistics = rocksdb_opt.statistics->ToString();
         std::string io_statistics = rocksdb::get_iostats_context()->ToString();
 //        std::cout << statistics << std::endl;

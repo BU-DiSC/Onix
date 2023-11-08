@@ -1,61 +1,56 @@
-import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
-import collections
+import pandas as pd
+import plotly.express as px
+import streamlit as st
+import time
+
+# Create Streamlit app
+st.title("Real-Time Performance Metrics")
+
+# Read data from the CSV file
+data_url = '../../build/performance/performance_metrics.csv'
+
+# Create graphs for Empty Reads, Non-Empty Reads, Range Reads, and Writes
+fig_empty_reads = px.line(title='Empty Reads')
+fig_non_empty_reads = px.line(title='Non-Empty Reads')
+fig_range_reads = px.line(title='Range Reads')
+fig_writes = px.line(title='Writes')
 
 
-def read_metrics(filename):
-    metrics_dict = collections.defaultdict(list)
-    with open(filename, 'r') as file:
-        for line in file:
-            parts = line.strip().split(',')
-            values = [int(part) for part in parts]
-            metrics_dict['Empty Reads Duration'].extend([values[0]])
-            metrics_dict['Read Duration'].extend([values[1]])
-            metrics_dict['Range Reads Duration'].extend([values[2]])
-            metrics_dict['Write Duration'].extend([values[3]])
-    return metrics_dict
+# Set x and y axis labels
+fig_empty_reads.update_xaxes(title_text='Real Time (s)')
+fig_empty_reads.update_yaxes(title_text='Time (ms)')
+fig_non_empty_reads.update_xaxes(title_text='Real Time (s)')
+fig_non_empty_reads.update_yaxes(title_text='Time (ms)')
+fig_range_reads.update_xaxes(title_text='Real Time (s)')
+fig_range_reads.update_yaxes(title_text='Time (ms)')
+fig_writes.update_xaxes(title_text='Real Time (s)')
+fig_writes.update_yaxes(title_text='Time (ms)')
 
+# Display the graphs initially
+empty_reads_chart = st.plotly_chart(fig_empty_reads)
+non_empty_reads_chart = st.plotly_chart(fig_non_empty_reads)
+range_reads_chart = st.plotly_chart(fig_range_reads)
+writes_chart = st.plotly_chart(fig_writes)
 
-def update_graph(ax, metric_name, metric_values):
-    ax.clear()
-    if len(metric_values)>20:
-        metric_values=metric_values[-20:]
-    ax.plot(metric_values, marker='o')
-    ax.set_title(metric_name)
-    ax.set_ylabel('Time(ms)')
-    ax.grid()
-    
-def update_graphs(i):
-    # Load and update the data from the file
-    metrics_dict = read_metrics('../../build/performance/performance_metrics.csv')
+# Real-time updates
+while True:
+    # Read data from the CSV file
+    df = pd.read_csv(data_url, header=None, names=["Empty Reads", "Non-Empty Reads", "Range Reads", "Writes"])
 
-    # Update the metric values
-    empty_reads_values.extend(metrics_dict['Empty Reads Duration'])
-    non_empty_reads_values.extend(metrics_dict['Read Duration'])
-    range_queries_values.extend(metrics_dict['Range Reads Duration'])
-    write_queries_values.extend(metrics_dict['Write Duration'])
+    # Update the graph data
+    fig_empty_reads.data[0].x = df.index
+    fig_empty_reads.data[0].y = df["Empty Reads"]
+    fig_non_empty_reads.data[0].x = df.index
+    fig_non_empty_reads.data[0].y = df["Non-Empty Reads"]
+    fig_range_reads.data[0].x = df.index
+    fig_range_reads.data[0].y = df["Range Reads"]
+    fig_writes.data[0].x = df.index
+    fig_writes.data[0].y = df["Writes"]
 
-    update_graph(ax_empty_reads, 'Empty Reads', empty_reads_values)
-    update_graph(ax_non_empty_reads, 'Non-Empty Reads', non_empty_reads_values)
-    update_graph(ax_range_queries, 'Range Queries', range_queries_values)
-    update_graph(ax_write_queries, 'Write Queries', write_queries_values)
+    # Update the displayed graphs
+    empty_reads_chart.plotly_chart(fig_empty_reads)
+    non_empty_reads_chart.plotly_chart(fig_non_empty_reads)
+    range_reads_chart.plotly_chart(fig_range_reads)
+    writes_chart.plotly_chart(fig_writes)
 
-
-fig, axs = plt.subplots(2, 2, figsize=(12, 6))
-ax_empty_reads, ax_non_empty_reads, ax_range_queries, ax_write_queries = axs.flatten()
-
-# Initialize empty lists to store metric values
-metrics_dict = read_metrics('../../build/performance/performance_metrics.csv')
-empty_reads_values = metrics_dict['Empty Reads Duration']
-non_empty_reads_values = metrics_dict['Read Duration']
-range_queries_values = metrics_dict['Range Reads Duration']
-write_queries_values = metrics_dict['Write Duration']
-
-try:
-    ani = FuncAnimation(fig, update_graphs, interval=5000)
-    plt.tight_layout()
-    plt.show()
-        
-        
-except KeyboardInterrupt:
-     pass
+    time.sleep(5)  # Update every 5 seconds
