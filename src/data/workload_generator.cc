@@ -18,6 +18,8 @@
 #include <string>
 #include <cstdlib>
 #include <algorithm>
+#include <fstream>
+#include <iterator>
 
 #include "zipf.hpp"
 
@@ -26,6 +28,7 @@ int key_size=10;
 int value_size=100;
 std::string performance_metrics_file_path = "performance/performance_metrics.csv";
 extern rocksdb::DB *db;
+extern int epochs;
 #define PAGESIZE 4096
 extern std::shared_ptr<spdlog::logger> workloadLoggerThread;
 
@@ -45,6 +48,16 @@ void WorkloadGenerator::GenerateWorkload(
         if (!metricsFile.is_open()) {
             workloadLoggerThread->debug("Failed to open metrics file for writing.");
             return;
+        }
+    std::ifstream metricsFileRead(performance_metrics_file_path);
+        if (metricsFileRead.is_open()) {
+            epochs = std::count(
+                std::istreambuf_iterator<char>(metricsFileRead),
+                std::istreambuf_iterator<char>(),
+                '\n'
+            );
+            metricsFileRead.close();
+            spdlog::info("epochs workload generator {}", epochs);
         }
 
     rocksdb::Options rocksdb_opt;
@@ -104,7 +117,7 @@ void WorkloadGenerator::GenerateWorkload(
                     << read_duration << ","
                     << range_duration << ","
                     << write_duration << std::endl;
-
+        epochs++;
         // Close the metrics file
         metricsFile.close();
        return;

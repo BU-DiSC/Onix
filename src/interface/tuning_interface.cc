@@ -22,6 +22,7 @@
 std::string key_file_path =  "database/keyfile.txt";
 std::shared_ptr<spdlog::logger> workloadLoggerThread = nullptr;
 std::shared_ptr<spdlog::logger> tuningParamsLoggerThread = nullptr;
+int epochs=0;
 int main(int argc, char * argv[]){
     using namespace clipp;
 
@@ -29,7 +30,7 @@ int main(int argc, char * argv[]){
             {
 
                 workloadLoggerThread = spdlog::basic_logger_mt("workloadLoggerThread", "logs/workloadLoggerThread.txt");
-                tuningParamsLoggerThread = spdlog::basic_logger_mt("tuningParamsLoggerThread", "logs/tuningParamsLoggerThread.txt");
+                //tuningParamsLoggerThread = spdlog::basic_logger_mt("tuningParamsLoggerThread", "logs/tuningParamsLoggerThread.txt");
 
             }
             catch (const spdlog::spdlog_ex &ex)
@@ -93,12 +94,14 @@ int main(int argc, char * argv[]){
         run_workload -> GenerateWorkload(empty_point_query_percentage*num_queries*0.25*0.01,
         non_empty_point_query_percentage*num_queries*0.25*0.01,
         range_query_percentage*num_queries*0.25*0.01, write_query_percentage*num_queries*0.25*0.01,0, key_file_path);
+        //epochs++;
     }
     while(true){
         for(int i=0;i<4;i++){
                 run_workload -> GenerateWorkload(empty_point_query_percentage*num_queries*0.25*0.01,
                 non_empty_point_query_percentage*num_queries*0.25*0.01,
                 range_query_percentage*num_queries*0.25*0.01, 0, write_query_percentage*num_queries*0.25*0.01, key_file_path);
+                //epochs++;
             }
     }
     spdlog::info("Done");

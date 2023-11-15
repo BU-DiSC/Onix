@@ -3,21 +3,53 @@
 #include "rocksdb/options.h"
 #include "spdlog/spdlog.h"
 #include "spdlog/sinks/basic_file_sink.h"
+#include <sstream>
+#include <vector>
+#include <string>
 #include <fstream>
 #include <cstring>
 #include <fcntl.h>
 #include <unistd.h>
+#include <iostream>
+#include <sys/stat.h>
 
 rocksdb::DB * db;
+extern int epochs;
 extern std::shared_ptr<spdlog::logger> tuningParamsLoggerThread;
+
 TuneParameters::TuneParameters(rocksdb::DB * db1){
     db=db1;
+     try
+                {
+
+                    //workloadLoggerThread = spdlog::basic_logger_mt("workloadLoggerThread", "logs/workloadLoggerThread.txt");
+                    tuningParamsLoggerThread = spdlog::basic_logger_mt("tuningParamsLoggerThread", "logs/tuningParamsLoggerThread.txt");
+
+                }
+                catch (const spdlog::spdlog_ex &ex)
+                {
+                    spdlog::error("Workload Log init failed: {}",ex.what());
+                }
+}
+
+std::vector<std::string> TuneParameters::parseKeyValuePairs(const std::string& input) {
+    std::vector<std::string> keyValuePairs;
+    std::istringstream iss(input);
+
+    // Split the input into lines
+    std::string line;
+    while (std::getline(iss, line)) {
+        keyValuePairs.push_back(line);
+    }
+
+    return keyValuePairs;
 }
 
 void TuneParameters::tune_parameters(std::atomic<bool>& shouldExit) {
     while (!shouldExit) {
 
         int pipe_fd = -1;
+        int epochs_pipe_fd =-1;
         sleep(10);      //provide time to unlock the pipe
         while(pipe_fd == -1) {
             sleep(10);
@@ -31,26 +63,66 @@ void TuneParameters::tune_parameters(std::atomic<bool>& shouldExit) {
             std::string optionValue;
             while ((read_result = read(pipe_fd, buffer, sizeof(buffer))) > 0) {
                         buffer[read_result] = '\0';
-                        // Parse the input from the pipe
-                        char* token = std::strtok(buffer, "=");
-                        if (token != nullptr) {
-                            optionName = token;
-                            token = std::strtok(nullptr, "=");
-                            if (token != nullptr) {
-                                optionValue = token;
-                                // Check if 'exit' was entered
-                                if (optionName == "exit") {
-                                    shouldExit = true;
-                                    break;
+                        std::vector<std::string> keyValuePairs = parseKeyValuePairs(buffer);
+
+                                for (const auto& keyValuePair : keyValuePairs) {
+                                    // Parse each key=value pair
+                                    char* token = std::strtok(const_cast<char*>(keyValuePair.c_str()), "=");
+                                    if (token != nullptr) {
+                                        optionName = token;
+                                        token = std::strtok(nullptr, "=");
+                                        if (token != nullptr) {
+                                            optionValue = token;
+
+                                            // Check if 'exit' was entered
+                                            if (optionName == "exit") {
+                                                shouldExit = true;
+                                                break;
+                                            }
+
+                                            // Set the options in RocksDB
+                                            spdlog::info("Tuning parameters start...");
+                                            spdlog::info("New parameter values {} {}", optionName, optionValue);
+                                            rocksdb::Status status = db->SetOptions({{optionName, optionValue}});
+                                            spdlog::info("Tuning parameters done...");
+                                        }
+                                    }
                                 }
-                                // Set the options in RocksDB
-                                spdlog::info("New parameter values {} {}", optionName, optionValue);
-                                rocksdb::Status status = db->SetOptions({{optionName, optionValue}});  //tune parameters
-                                spdlog::info("Tuning parameters...");
-                            }
-                        }
+                                spdlog::info("Tuning parameters complete...");
+                                spdlog::info("epochs tuning params{}", epochs);
+                                int initialEpochs = epochs;
+                                while (epochs < initialEpochs + 10) {
+                                    sleep(1);
+                                }
+
+                                // Report the number of epochs through the pipe
+                                std::string pipe_path = "passing_epochs";
+
+                                    // Check if the pipe exists
+                                    if (access(pipe_path.c_str(), F_OK) == -1) {
+                                        // If it doesn't exist, create the pipe
+                                        if (mkfifo(pipe_path.c_str(), 0666) == -1) {
+                                            spdlog::error("Failed to create the passing_epochs pipe. Error: {}", strerror(errno));
+                                            return ;
+                                        }
+                                    }
+
+                                    // Open the pipe for writing
+                                    int epochs_pipe_fd = open(pipe_path.c_str(), O_RDWR);
+                                    if (epochs_pipe_fd == -1) {
+                                        spdlog::error("Failed to open the passing_epochs pipe. Error: {}", strerror(errno));
+                                        return ;
+                                    }
+                                std::ostringstream oss;
+                                oss << epochs;
+                                write(epochs_pipe_fd, oss.str().c_str(), oss.str().length());
+
+                                spdlog::info("Reported epochs: {}", epochs);
+
                     }
 
                     close(pipe_fd);
+                    close(epochs_pipe_fd);
                 }
 }
+
