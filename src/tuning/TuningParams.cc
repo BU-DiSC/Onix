@@ -44,36 +44,6 @@ std::vector<std::string> TuneParameters::parseKeyValuePairs(const std::string& i
 
     return keyValuePairs;
 }
-//void TuneParameters::restart_db(){
-//    spdlog::info("restarting db");
-//    rocksdb::Status x;
-//    if (db != nullptr) {
-//    x=db->Close();
-//    spdlog::info("closing db");
-//    }
-//    if (!x.ok()) {
-//        spdlog::debug("couldn't close rocksdb");
-//        }
-//        db=nullptr;
-//        rocksdb::DB* new_db = nullptr;
-//        rocksdb::Options options;
-//        options.create_if_missing = false;
-//        spdlog::info("options set");
-//         rocksdb::Status status;
-//        try {
-//            status = rocksdb::DB::Open(options, db_path, &new_db);
-//        }
-//        catch (const std::exception& e) {
-//            spdlog::error("Exception while opening RocksDB: {}", e.what());
-//
-//            if (!status.ok()) {
-//                spdlog::debug("Failed to open database: " + status.ToString() );
-//                return ;
-//            }
-//        }
-//        new_db=db;
-//        spdlog::info("restart complete");
-//    }
 void TuneParameters::restart_db(){
     spdlog::info("trying to restart db");
     rocksdb::Status close_status;
