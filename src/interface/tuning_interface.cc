@@ -22,6 +22,7 @@
 std::string key_file_path =  "database/keyfile.txt";
 std::shared_ptr<spdlog::logger> workloadLoggerThread = nullptr;
 std::shared_ptr<spdlog::logger> tuningParamsLoggerThread = nullptr;
+std::string db_path = "database/mlosDb";
 int epochs=0;
 int main(int argc, char * argv[]){
     using namespace clipp;
@@ -46,7 +47,7 @@ int main(int argc, char * argv[]){
     int num_queries = 1000; // Number of queries to perform for measuring performance
     int key_size = 10;
     int value_size = 100;
-    std::string db_path = "database/mlosDb";
+
 
     auto cli = (
         option("--N") & value("N", N),
@@ -72,7 +73,6 @@ int main(int argc, char * argv[]){
 
     if (!status.ok()) {
         spdlog::debug("Failed to open database: " + status.ToString() );
-        spdlog::debug("Failed to open database: ",status.ToString());
         return 1;
     }
 
