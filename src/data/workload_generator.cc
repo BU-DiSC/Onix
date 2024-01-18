@@ -24,8 +24,8 @@
 #include "zipf.hpp"
 
 
-int key_size=10;
-int value_size=100;
+extern int key_size;
+extern int value_size;
 std::string performance_metrics_file_path = "performance/performance_metrics.csv";
 extern rocksdb::DB *db;
 extern int epochs;
@@ -57,7 +57,7 @@ void WorkloadGenerator::GenerateWorkload(
                 '\n'
             );
             metricsFileRead.close();
-            spdlog::info("epochs workload generator {}", epochs);
+//            spdlog::info("epochs workload generator {}", epochs);
         }
 
     rocksdb::Options rocksdb_opt;

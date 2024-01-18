@@ -1,6 +1,5 @@
 #include "TuningParams.hpp"
-#include "rocksdb/db.h"
-#include "rocksdb/options.h"
+#include "tuning_interface.hpp"
 #include "spdlog/spdlog.h"
 #include "spdlog/sinks/basic_file_sink.h"
 #include <sstream>
@@ -11,15 +10,14 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <iostream>
+#include <unistd.h>
 #include <sys/stat.h>
 
-rocksdb::DB * db;
-extern std::string db_path;
-extern int epochs;
+
 extern std::shared_ptr<spdlog::logger> tuningParamsLoggerThread;
 
-TuneParameters::TuneParameters(rocksdb::DB * db1){
-    db=db1;
+TuneParameters::TuneParameters(){
+    //db=db1;
      try
                 {
 
@@ -44,39 +42,15 @@ std::vector<std::string> TuneParameters::parseKeyValuePairs(const std::string& i
 
     return keyValuePairs;
 }
-void TuneParameters::restart_db(){
-    spdlog::info("trying to restart db");
-    rocksdb::Status close_status;
-    if (db != nullptr) {
-         close_status=db->Close();
+int TuneParameters::signal_tune_db(std::vector<std::string> values){
 
-    }
-    if (!close_status.ok()) {
-        spdlog::debug("couldn't close rocksdb instance");
-    }
-    db=nullptr;
-    spdlog::info("closing old db complete");
-    rocksdb::DB* new_db = nullptr;
-    rocksdb::Options options;
-    options.create_if_missing = false;
-    spdlog::info("options for new db set");
-    rocksdb::Status reopen_status;
-    try {
-       spdlog::info("opening new db at {}", db_path);
-       reopen_status = rocksdb::DB::Open(options, db_path, &new_db);
-    }
-    catch (const std::exception& e) {
-            spdlog::error("Exception while re opening RocksDB: {}", e.what());
+    return TuningInterface::tune_db(values);
 
-            if (!reopen_status.ok()) {
-                spdlog::debug("Failed to open database: " + reopen_status.ToString() );
-                return ;
-            }
-    }
-    db=new_db;
-    spdlog::info("restart complete");
 }
 void TuneParameters::tune_parameters(std::atomic<bool>& shouldExit) {
+//std::this_thread::sleep_for(std::chrono::seconds(15));
+//signal_restart_db();
+
     while (!shouldExit) {
 
         int pipe_fd = -1;
@@ -95,51 +69,12 @@ void TuneParameters::tune_parameters(std::atomic<bool>& shouldExit) {
             while ((read_result = read(pipe_fd, buffer, sizeof(buffer))) > 0) {
                         buffer[read_result] = '\0';
                         std::vector<std::string> keyValuePairs = parseKeyValuePairs(buffer);
-
-                                for (const auto& keyValuePair : keyValuePairs) {
-                                    // Parse each key=value pair
-                                    char* token = std::strtok(const_cast<char*>(keyValuePair.c_str()), "=");
-                                    if (token != nullptr) {
-                                        optionName = token;
-                                        token = std::strtok(nullptr, "=");
-                                        if (token != nullptr) {
-                                            optionValue = token;
-
-                                            // Check if 'exit' was entered
-                                            if (optionName == "exit") {
-                                                shouldExit = true;
-                                                break;
-                                            }
-
-                                            // Set the options in RocksDB
-                                            spdlog::info("Tuning parameters start...");
-                                            spdlog::info("New parameter values {} {}", optionName, optionValue);
-                                            rocksdb::Status status = db->SetOptions({{optionName, optionValue}});
-                                            //rocksdb::Status status = db->SetOptions({{"target_file_size_base", "1000"}});
-                                            spdlog::info("Tuning parameters done...");
-                                        }
-                                    }
-                                }
+                               int epochs = signal_tune_db(keyValuePairs);
                                 spdlog::info("Tuning parameters complete...");
-                                spdlog::info("epochs tuning params{}", epochs);
-                                int initialEpochs = epochs;
-//                                int x=0;
-//                                while (x<60 && epochs < initialEpochs + 10){
-//                                    sleep(2);
-//                                    x+=1;
-//                                }
-                               int e=epochs;
-//                               if (epochs<initialEpochs+10){
-                                restart_db();
-                                e=-1;
-                               //}
 
-                                // Report the number of epochs through the pipe
                                 std::string pipe_path = "passing_epochs";
 
-                                    // Check if the pipe exists
                                     if (access(pipe_path.c_str(), F_OK) == -1) {
-                                        // If it doesn't exist, create the pipe
                                         if (mkfifo(pipe_path.c_str(), 0666) == -1) {
                                             spdlog::error("Failed to create the passing_epochs pipe. Error: {}", strerror(errno));
                                             return ;
@@ -153,7 +88,7 @@ void TuneParameters::tune_parameters(std::atomic<bool>& shouldExit) {
                                         return ;
                                     }
                                 std::ostringstream oss;
-                                oss << e;
+                                oss << epochs;
                                 write(epochs_pipe_fd, oss.str().c_str(), oss.str().length());
 
                                 spdlog::info("Reported epochs: {}", epochs);

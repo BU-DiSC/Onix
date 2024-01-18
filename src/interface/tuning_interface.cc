@@ -4,11 +4,9 @@
 #include <future>
 #include <fstream>
 #include "clipp.h"
-#include "data_generator.hpp"
-#include "rocksdb/db.h"
-#include "rocksdb/options.h"
-#include "workload_generator.hpp"
 #include "TuningParams.hpp"
+#include "database_handler.hpp"
+#include "tuning_interface.hpp"
 #include "spdlog/spdlog.h"
 #include "spdlog/sinks/basic_file_sink.h"
 #include <sys/types.h>
@@ -19,13 +17,29 @@
 #include <unistd.h>
 
 
-std::string key_file_path =  "database/keyfile.txt";
+
 std::shared_ptr<spdlog::logger> workloadLoggerThread = nullptr;
 std::shared_ptr<spdlog::logger> tuningParamsLoggerThread = nullptr;
-std::string db_path = "database/mlosDb";
-int epochs=0;
+
+
+std::thread parameter_tuning_thread;
+std::thread workload_running_thread;
+
+
+
+
 int main(int argc, char * argv[]){
     using namespace clipp;
+    int N = 1000; // Number of records to prepopulate (adjust as needed)
+        int empty_point_query_percentage = 25;
+        int non_empty_point_query_percentage = 25;
+        int range_query_percentage = 25;
+        int write_query_percentage = 25;
+        int num_queries = 1000; // Number of queries to perform for measuring performance
+
+
+        std::atomic<bool> ex(false);
+
 
     try
             {
@@ -39,16 +53,9 @@ int main(int argc, char * argv[]){
                 spdlog::error("Workload Log init failed: {}",ex.what());
             }
 
-    int N = 1000; // Number of records to prepopulate (adjust as needed)
-    int empty_point_query_percentage = 25;
-    int non_empty_point_query_percentage = 25;
-    int range_query_percentage = 25;
-    int write_query_percentage = 25;
-    int num_queries = 1000; // Number of queries to perform for measuring performance
-    int key_size = 10;
-    int value_size = 100;
 
 
+    std::string db_path = "database/mlosDb";
     auto cli = (
         option("--N") & value("N", N),
         option("--empty-point-query-percentage") & value("empty_percentage", empty_point_query_percentage),
@@ -65,46 +72,40 @@ int main(int argc, char * argv[]){
         return 1;
     }
 
-    rocksdb::DB* db = nullptr;
-    rocksdb::Options options;
-    options.create_if_missing = true;
-
-    rocksdb::Status status = rocksdb::DB::Open(options, db_path, &db);
-
-    if (!status.ok()) {
-        spdlog::debug("Failed to open database: " + status.ToString() );
-        return 1;
-    }
-
-    DataGenerator *prePopulater = new DataGenerator(db,key_file_path);
-    status = prePopulater->bulkLoader(N, key_size, value_size);
-    if (!status.ok()) {
-            spdlog::debug("Failed to bulk load database: ",status.ToString());
-            return 1;
-    }
 
       std::atomic<bool> shouldExit(false);
-      TuneParameters t(db);
+      TuneParameters t;
+      spdlog::info("b4 dbh");
+      Database_Handler dbh{N};
 
     // Start the parameter tuning thread
     std::thread parameter_tuning_thread(&TuneParameters::tune_parameters,&t,std::ref(shouldExit));
+    std::thread workload_running_thread(&Database_Handler::run_workloads,empty_point_query_percentage,
+    non_empty_point_query_percentage,range_query_percentage,write_query_percentage,num_queries);
+//    std::thread workload_running_thread(&Database_Handler::run_workloads,&dbh,std::ref(empty_point_query_percentage),
+//                                   std::ref(non_empty_point_query_percentage),std::ref(range_query_percentage),
+//                                   std::ref(write_query_percentage),std::ref(num_queries));
 
-    WorkloadGenerator* run_workload = new WorkloadGenerator(db);
-    for(int i=0;i<4;i++){
-        run_workload -> GenerateWorkload(empty_point_query_percentage*num_queries*0.25*0.01,
-        non_empty_point_query_percentage*num_queries*0.25*0.01,
-        range_query_percentage*num_queries*0.25*0.01, write_query_percentage*num_queries*0.25*0.01,0, key_file_path);
-        //epochs++;
+    spdlog::info("after dbh");
+
+
+    while(!ex){
+        std::this_thread::sleep_for(std::chrono::seconds(2));
     }
-    while(true){
-        for(int i=0;i<4;i++){
-                run_workload -> GenerateWorkload(empty_point_query_percentage*num_queries*0.25*0.01,
-                non_empty_point_query_percentage*num_queries*0.25*0.01,
-                range_query_percentage*num_queries*0.25*0.01, 0, write_query_percentage*num_queries*0.25*0.01, key_file_path);
-                //epochs++;
-            }
-    }
+
     spdlog::info("Done");
     parameter_tuning_thread.join();
+    workload_running_thread.join();
     return 0;
 }
+
+TuningInterface::TuningInterface(){
+
+}
+
+int TuningInterface::tune_db(std::vector<std::string> values){
+    return Database_Handler::TuneDB(values);
+}
+
+
+
