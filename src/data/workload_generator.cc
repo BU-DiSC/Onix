@@ -76,6 +76,7 @@ void WorkloadGenerator::GenerateWorkload(
         rocksdb_opt.statistics->Reset();
         rocksdb::get_iostats_context()->Reset();
         rocksdb::get_perf_context()->Reset();
+//        spdlog::info("workload queries {} {} {} {}", writeQueries,updateQueries,emptyPointQueries,nonEmptyPointQueries,rangeQueries);
         if (writeQueries > 0)
         {
             write_duration = run_random_inserts(key_file_path, db, writeQueries);

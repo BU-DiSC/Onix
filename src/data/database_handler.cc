@@ -40,23 +40,24 @@ Database_Handler::Database_Handler(int N){
 
 void Database_Handler::run_workloads(int empty_point_query_percentage,
     int non_empty_point_query_percentage, int range_query_percentage, int write_query_percentage, int num_queries ){
-    spdlog::info("database handler num queries");
-    std::cout<<empty_point_query_percentage<<non_empty_point_query_percentage<<range_query_percentage<<std::endl;
+    spdlog::info("database handler num queries {} {} {} {} {}",num_queries,empty_point_query_percentage,non_empty_point_query_percentage,range_query_percentage,write_query_percentage);
     WorkloadGenerator* run_workload= new WorkloadGenerator(db);
+    spdlog::info("database handler num queries {} {} {} {} {}",num_queries,static_cast<double>(empty_point_query_percentage)*num_queries*0.25*0.01,static_cast<double>(non_empty_point_query_percentage)*num_queries*0.25*0.01,static_cast<double>(range_query_percentage)*num_queries*0.25*0.01,static_cast<double>(write_query_percentage)*num_queries*0.25*0.01);
     while(flag){
         for(int i=0;i<4;i++){
 
-            run_workload -> GenerateWorkload(empty_point_query_percentage*num_queries*0.25*0.01,
-            non_empty_point_query_percentage*num_queries*0.25*0.01,
-            range_query_percentage*num_queries*0.25*0.01, write_query_percentage*num_queries*0.25*0.01,0, key_file_path);
+            run_workload -> GenerateWorkload(static_cast<double>(empty_point_query_percentage)*num_queries*0.25f*0.01,
+            static_cast<double>(non_empty_point_query_percentage)*num_queries*0.25*0.01,
+            static_cast<double>(range_query_percentage)*num_queries*0.25*0.01, static_cast<double>(write_query_percentage)*num_queries*0.25*0.01,0, key_file_path);
             //epochs++;
         }
-        for(int i=0;i<4;i++){
-                run_workload -> GenerateWorkload(empty_point_query_percentage*num_queries*0.25*0.01,
-                non_empty_point_query_percentage*num_queries*0.25*0.01,
-                range_query_percentage*num_queries*0.25*0.01, 0, write_query_percentage*num_queries*0.25*0.01, key_file_path);
-                //epochs++;
-        }
+
+//        for(int i=0;i<4;i++){
+//                run_workload -> GenerateWorkload(empty_point_query_percentage*num_queries*0.25*0.01,
+//                non_empty_point_query_percentage*num_queries*0.25*0.01,
+//                range_query_percentage*num_queries*0.25*0.01, 0, write_query_percentage*num_queries*0.25*0.01, key_file_path);
+//                //epochs++;
+//        }
     }
 }
 
@@ -66,10 +67,11 @@ void Database_Handler::restart_db(){
     flag=false;
     //run_workload();
     spdlog::info("signal db restart 1");
-        rocksdb::CancelAllBackgroundWork(db,true);
+//        rocksdb::CancelAllBackgroundWork(db,true);
         spdlog::info("signal db restart 2");
-        std::this_thread::sleep_for (std::chrono::seconds(5));
+        std::this_thread::sleep_for (std::chrono::seconds(10));
         db->Close();
+        std::this_thread::sleep_for (std::chrono::seconds(10));
         spdlog::info("signal db restart 3");
         delete db;
         spdlog::info("signal db restart 4");
@@ -101,6 +103,14 @@ std::string optionName;
                 if (optionName == "exit") {
                     break;
                 }
+                if (optionName == "avoid_flush_during_shutdown"){
+                    if (optionValue=="0"){
+                        optionValue="false";
+                    }
+                  else{
+                    optionValue="true";
+                  }
+                }
 
                 // Set the options in RocksDB
                 spdlog::info("Tuning parameters start...");
@@ -111,16 +121,19 @@ std::string optionName;
         }
     }
     spdlog::info("Tuning parameters complete...");
-    spdlog::info("epochs tuning params{}", epochs);
+    spdlog::info("epochs tuning params {}", epochs);
     int targetEpochs = epochs+10;
+    int starting_epoch=epochs;
 //    int x=0;
-//    while (x<1 && epochs < initialEpochs + 10){
-//        sleep(2);
+//    while (x<10 && epochs < targetEpochs){
+    std::this_thread::sleep_for(std::chrono::seconds(10));
+    while (epochs!=starting_epoch && epochs < targetEpochs){
+        std::this_thread::sleep_for(std::chrono::seconds(2));
 //        x+=1;
-//    }
-   int e=epochs;
-   spdlog::info("epochs tuning params {} {} {}", targetEpochs,epochs,e);
-   if (epochs<targetEpochs){
+        spdlog::info("epochs tuning params {} {}", epochs,targetEpochs);
+    }
+   int e=std::max(epochs-1,0);
+   if (epochs==starting_epoch){ //database has hanged
     spdlog::info("going in restart db");
     restart_db();
     e=-1;
