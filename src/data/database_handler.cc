@@ -103,14 +103,7 @@ std::string optionName;
                 if (optionName == "exit") {
                     break;
                 }
-                if (optionName == "avoid_flush_during_shutdown"){
-                    if (optionValue=="0"){
-                        optionValue="false";
-                    }
-                  else{
-                    optionValue="true";
-                  }
-                }
+
 
                 // Set the options in RocksDB
                 spdlog::info("Tuning parameters start...");
