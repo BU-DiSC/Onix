@@ -65,11 +65,13 @@ file(GLOB_RECURSE
     ${CMAKE_SOURCE_DIR}/src/tuning/*.cc
     ${CMAKE_SOURCE_DIR}/src/tuning/*.cpp
     ${CMAKE_SOURCE_DIR}/src/tuning/*.hpp
+    ${CMAKE_SOURCE_DIR}/src/interface/*.hpp
 )
 add_library(tools OBJECT ${TOOLS_SRCS})
 target_include_directories(tools PUBLIC
     ${CMAKE_SOURCE_DIR}/src/data
     ${CMAKE_SOURCE_DIR}/src/tuning
+    ${CMAKE_SOURCE_DIR}/src/interface
 )
 
 target_link_libraries(tools PUBLIC

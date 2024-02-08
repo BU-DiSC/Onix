@@ -18,14 +18,17 @@
 #include <string>
 #include <cstdlib>
 #include <algorithm>
+#include <fstream>
+#include <iterator>
 
 #include "zipf.hpp"
 
 
-int key_size=10;
-int value_size=100;
+extern int key_size;
+extern int value_size;
 std::string performance_metrics_file_path = "performance/performance_metrics.csv";
 extern rocksdb::DB *db;
+extern int epochs;
 #define PAGESIZE 4096
 extern std::shared_ptr<spdlog::logger> workloadLoggerThread;
 
@@ -46,6 +49,16 @@ void WorkloadGenerator::GenerateWorkload(
             workloadLoggerThread->debug("Failed to open metrics file for writing.");
             return;
         }
+    std::ifstream metricsFileRead(performance_metrics_file_path);
+        if (metricsFileRead.is_open()) {
+            epochs = std::count(
+                std::istreambuf_iterator<char>(metricsFileRead),
+                std::istreambuf_iterator<char>(),
+                '\n'
+            );
+            metricsFileRead.close();
+//            spdlog::info("epochs workload generator {}", epochs);
+        }
 
     rocksdb::Options rocksdb_opt;
     rocksdb_opt.statistics = rocksdb::CreateDBStatistics();
@@ -63,6 +76,7 @@ void WorkloadGenerator::GenerateWorkload(
         rocksdb_opt.statistics->Reset();
         rocksdb::get_iostats_context()->Reset();
         rocksdb::get_perf_context()->Reset();
+//        spdlog::info("workload queries {} {} {} {}", writeQueries,updateQueries,emptyPointQueries,nonEmptyPointQueries,rangeQueries);
         if (writeQueries > 0)
         {
             write_duration = run_random_inserts(key_file_path, db, writeQueries);
@@ -104,7 +118,7 @@ void WorkloadGenerator::GenerateWorkload(
                     << read_duration << ","
                     << range_duration << ","
                     << write_duration << std::endl;
-
+        epochs++;
         // Close the metrics file
         metricsFile.close();
        return;

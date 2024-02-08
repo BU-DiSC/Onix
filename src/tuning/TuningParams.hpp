@@ -6,8 +6,10 @@
 
 class TuneParameters {
 public:
-    TuneParameters(rocksdb::DB * db);
+    TuneParameters();
     void tune_parameters(std::atomic<bool>& shouldExit);
+    std::vector<std::string> parseKeyValuePairs(const std::string& input);
+    int signal_tune_db(std::vector<std::string> values);
 };
 
 #endif // TUNING_PARAMS_H
