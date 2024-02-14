@@ -31,6 +31,7 @@ extern rocksdb::DB *db;
 extern int epochs;
 #define PAGESIZE 4096
 extern std::shared_ptr<spdlog::logger> workloadLoggerThread;
+extern std::string db_path;
 
 WorkloadGenerator::WorkloadGenerator(rocksdb::DB *db1){
     db=db1;
@@ -337,7 +338,10 @@ int WorkloadGenerator::run_random_updates(std::vector<std::string> existing_keys
                 workloadLoggerThread->error("10\% of total writes have failed, aborting");
                 db->Close();
                 delete db;
-                exit(EXIT_FAILURE);
+                rocksdb::Options new_options;
+                new_options.create_if_missing = false;
+                rocksdb::Status status = rocksdb::DB::Open(new_options, db_path, &db);
+//                exit(EXIT_FAILURE);
             }
         }
     }
