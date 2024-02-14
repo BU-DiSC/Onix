@@ -24,18 +24,17 @@ std::shared_ptr<spdlog::logger> tuningParamsLoggerThread = nullptr;
 
 std::thread parameter_tuning_thread;
 std::thread workload_running_thread;
-
-
+int empty_point_query_percentage = 25;
+int non_empty_point_query_percentage = 25;
+int range_query_percentage = 25;
+int write_query_percentage = 25;
+int num_queries = 1000; // Number of queries to perform for measuring performance
 
 
 int main(int argc, char * argv[]){
     using namespace clipp;
     int N = 1000; // Number of records to prepopulate (adjust as needed)
-        int empty_point_query_percentage = 25;
-        int non_empty_point_query_percentage = 25;
-        int range_query_percentage = 25;
-        int write_query_percentage = 25;
-        int num_queries = 1000; // Number of queries to perform for measuring performance
+
 
 
         std::atomic<bool> ex(false);
@@ -105,8 +104,11 @@ TuningInterface::TuningInterface(){
 
 int TuningInterface::tune_db(std::vector<std::string> values){
     int ep=Database_Handler::TuneDB(values);
-    if (ep==-1){ workload_running_thread.end();std::thread workload_running_thread(&Database_Handler::run_workloads,empty_point_query_percentage,
-    non_empty_point_query_percentage,range_query_percentage,write_query_percentage,num_queries);}
+    if (ep==-1){
+        workload_running_thread.join();
+        std::thread workload_running_thread(&Database_Handler::run_workloads,empty_point_query_percentage,
+    non_empty_point_query_percentage,range_query_percentage,write_query_percentage,num_queries);
+    }
    return ep; 
 }
 
