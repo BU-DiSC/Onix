@@ -104,7 +104,10 @@ TuningInterface::TuningInterface(){
 }
 
 int TuningInterface::tune_db(std::vector<std::string> values){
-    return Database_Handler::TuneDB(values);
+    int ep=Database_Handler::TuneDB(values);
+    if (ep==-1){ workload_running_thread.end();std::thread workload_running_thread(&Database_Handler::run_workloads,empty_point_query_percentage,
+    non_empty_point_query_percentage,range_query_percentage,write_query_percentage,num_queries);}
+   return ep; 
 }
 
 
