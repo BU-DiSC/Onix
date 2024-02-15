@@ -13,6 +13,7 @@
 #include "spdlog/spdlog.h"
 #include "spdlog/sinks/basic_file_sink.h"
 #include "spdlog/async.h"
+#include "tuning_interface.hpp"
 #include <clipp.h>
 #include <fstream>
 #include <string>
@@ -81,10 +82,16 @@ void WorkloadGenerator::GenerateWorkload(
         if (writeQueries > 0)
         {
             write_duration = run_random_inserts(key_file_path, db, writeQueries);
+            if (write_duration==-1){
+                TuningInterface::restart_db_thread();
+            }
         }
         else if (updateQueries > 0)
         {
             write_duration = run_random_updates(existing_keys,key_file_path, db, updateQueries);
+            if (write_duration==-1){
+                            TuningInterface::restart_db_thread();
+                        }
         }
         if (emptyPointQueries > 0)
         {
@@ -289,9 +296,10 @@ int WorkloadGenerator::run_random_inserts(std::string key_file_path, rocksdb::DB
             if (writes_failed > max_writes_failed)
             {
                 workloadLoggerThread->error("10\% of total writes have failed, aborting");
-                db->Close();
-                delete db;
-                exit(EXIT_FAILURE);
+//                return -1;
+//                db->Close();
+//                delete db;
+//                exit(EXIT_FAILURE);
             }
         }
     }
@@ -336,11 +344,7 @@ int WorkloadGenerator::run_random_updates(std::vector<std::string> existing_keys
             if (writes_failed > max_writes_failed)
             {
                 workloadLoggerThread->error("10\% of total writes have failed, aborting");
-                db->Close();
-                delete db;
-                rocksdb::Options new_options;
-                new_options.create_if_missing = false;
-                rocksdb::Status status = rocksdb::DB::Open(new_options, db_path, &db);
+//                return -1;
 //                exit(EXIT_FAILURE);
             }
         }

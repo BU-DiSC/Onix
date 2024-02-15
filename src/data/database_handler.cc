@@ -64,9 +64,11 @@ void Database_Handler::run_workloads(int empty_point_query_percentage,
 void Database_Handler::restart_db(){
 
     spdlog::info("trying to restart db");
-    flag=false;
-    //run_workload();
     spdlog::info("signal db restart 1");
+//    rocksdb::FlushOptions flush_opt;
+//        flush_opt.wait = true;
+//        db->Flush(flush_opt);
+//    spdlog::info("db flushed");
         rocksdb::CancelAllBackgroundWork(db,true);
         spdlog::info("signal db restart 2");
         std::this_thread::sleep_for (std::chrono::seconds(10));
@@ -75,15 +77,9 @@ void Database_Handler::restart_db(){
         spdlog::info("signal db restart 3");
         delete db;
         spdlog::info("signal db restart 4");
-            //rocksdb::DB* new_db = nullptr;
-            //rocksdb::Options options1;
-             //options1.create_if_missing = false;
             rocksdb::Status status = rocksdb::DB::Open(options, db_path, &db);
-            //db=new_db;
             spdlog::info("signal db restart 5");
             std::this_thread::sleep_for(std::chrono::seconds(10));
-            flag=true;
-            //std::thread workload_running_thread(TuningInterface::run_workloads);
             spdlog::info("signal db restart 6");
 
 }
@@ -114,7 +110,6 @@ std::string optionName;
         }
     }
     spdlog::info("Tuning parameters complete...");
-    spdlog::info("epochs tuning params {}", epochs);
     int targetEpochs = epochs+10;
     int starting_epoch=epochs;
     int x=0;
@@ -123,12 +118,11 @@ std::string optionName;
     while (x<20 && epochs!=starting_epoch && epochs < targetEpochs){
         std::this_thread::sleep_for(std::chrono::seconds(5));
         x+=1;
-        spdlog::info("epochs tuning params {} {}", epochs,targetEpochs);
     }
    int e=std::max(epochs-1,0);
    if (epochs<targetEpochs){ //database has hanged
     spdlog::info("going in restart db");
-//    restart_db();
+    restart_db();
     e=-1;
    }
    return e;

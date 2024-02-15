@@ -74,7 +74,6 @@ int main(int argc, char * argv[]){
 
       std::atomic<bool> shouldExit(false);
       TuneParameters t;
-      spdlog::info("b4 dbh");
       Database_Handler dbh{N};
 
     // Start the parameter tuning thread
@@ -85,7 +84,6 @@ int main(int argc, char * argv[]){
 //                                   std::ref(non_empty_point_query_percentage),std::ref(range_query_percentage),
 //                                   std::ref(write_query_percentage),std::ref(num_queries));
 
-    spdlog::info("after dbh");
 
 
     while(!ex){
@@ -102,14 +100,18 @@ TuningInterface::TuningInterface(){
 
 }
 
+void TuningInterface::restart_db_thread(){
+    spdlog::info("kill workload thread");
+    workload_running_thread.std::thread::~thread();
+    spdlog::info("restart workload thread");
+    std::thread workload_running_thread(&Database_Handler::run_workloads,empty_point_query_percentage,
+        non_empty_point_query_percentage,range_query_percentage,write_query_percentage,num_queries);
+        workload_running_thread.detach();
+        return;
+}
+
 int TuningInterface::tune_db(std::vector<std::string> values){
-    int ep=Database_Handler::TuneDB(values);
-    if (ep==-1){
-        workload_running_thread.join();
-        std::thread workload_running_thread(&Database_Handler::run_workloads,empty_point_query_percentage,
-    non_empty_point_query_percentage,range_query_percentage,write_query_percentage,num_queries);
-    }
-   return ep; 
+    return Database_Handler::TuneDB(values);
 }
 
 
