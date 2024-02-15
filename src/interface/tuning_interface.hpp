@@ -7,5 +7,6 @@ class TuningInterface {
 public:
     TuningInterface();
     static int tune_db(std::vector<std::string> values);
+    static void restart_db_thread();
 };
 #endif
