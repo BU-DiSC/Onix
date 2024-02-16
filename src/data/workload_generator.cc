@@ -24,19 +24,21 @@
 
 #include "zipf.hpp"
 
+#define PAGESIZE 4096
 
 extern int key_size;
 extern int value_size;
-std::string performance_metrics_file_path = "performance/performance_metrics.csv";
 extern rocksdb::DB *db;
 extern int epochs;
-#define PAGESIZE 4096
 extern std::shared_ptr<spdlog::logger> workloadLoggerThread;
 extern std::string db_path;
 
-WorkloadGenerator::WorkloadGenerator(rocksdb::DB *db1){
-    db=db1;
+std::string performance_metrics_file_path = "performance/performance_metrics.csv";
+
+WorkloadGenerator::WorkloadGenerator(rocksdb::DB *new_db){
+    db=new_db;
 }
+
 void WorkloadGenerator::GenerateWorkload(
     double emptyPointQueries,
     double nonEmptyPointQueries,
@@ -47,89 +49,75 @@ void WorkloadGenerator::GenerateWorkload(
 ) {
     //write performance metrics in a file
     std::ofstream metricsFile(performance_metrics_file_path,std::ios::app);
-        if (!metricsFile.is_open()) {
-            workloadLoggerThread->debug("Failed to open metrics file for writing.");
-            return;
-        }
+    if (!metricsFile.is_open()) {
+        workloadLoggerThread->debug("Failed to open metrics file for writing.");
+        return;
+    }
     std::ifstream metricsFileRead(performance_metrics_file_path);
-        if (metricsFileRead.is_open()) {
-            epochs = std::count(
-                std::istreambuf_iterator<char>(metricsFileRead),
-                std::istreambuf_iterator<char>(),
-                '\n'
-            );
-            metricsFileRead.close();
-//            spdlog::info("epochs workload generator {}", epochs);
-        }
+    if (metricsFileRead.is_open()) {
+        epochs = std::count(
+            std::istreambuf_iterator<char>(metricsFileRead),
+            std::istreambuf_iterator<char>(),
+            '\n'
+        );
+        metricsFileRead.close();
+    }
 
     rocksdb::Options rocksdb_opt;
     rocksdb_opt.statistics = rocksdb::CreateDBStatistics();
     WorkloadGenerator workload_generator(db);
 
     int empty_read_duration = 0, read_duration = 0, range_duration = 0;
-        int write_duration = 0, compact_duration = 0;
-        std::vector<std::string> existing_keys;
+    int write_duration = 0, compact_duration = 0;
+    std::vector<std::string> existing_keys;
 
-        if ((nonEmptyPointQueries > 0) || (rangeQueries > 0 || emptyPointQueries > 0))
-        {
-            existing_keys = workload_generator.get_all_valid_keys(key_file_path);
+    if ((nonEmptyPointQueries > 0) || (rangeQueries > 0 || emptyPointQueries > 0))
+    {
+        existing_keys = workload_generator.get_all_valid_keys(key_file_path);
+    }
+
+    rocksdb_opt.statistics->Reset();
+    rocksdb::get_iostats_context()->Reset();
+    rocksdb::get_perf_context()->Reset();
+    if (writeQueries > 0)
+    {
+        write_duration = run_random_inserts(key_file_path, db, writeQueries);
+        if (write_duration==-1){
+            TuningInterface::restart_db_thread();
         }
-
-        rocksdb_opt.statistics->Reset();
-        rocksdb::get_iostats_context()->Reset();
-        rocksdb::get_perf_context()->Reset();
-//        spdlog::info("workload queries {} {} {} {}", writeQueries,updateQueries,emptyPointQueries,nonEmptyPointQueries,rangeQueries);
-        if (writeQueries > 0)
-        {
-            write_duration = run_random_inserts(key_file_path, db, writeQueries);
-            if (write_duration==-1){
-                TuningInterface::restart_db_thread();
-            }
+    }
+    else if (updateQueries > 0)
+    {
+        write_duration = run_random_updates(existing_keys,key_file_path, db, updateQueries);
+        if (write_duration==-1){
+            TuningInterface::restart_db_thread();
         }
-        else if (updateQueries > 0)
-        {
-            write_duration = run_random_updates(existing_keys,key_file_path, db, updateQueries);
-            if (write_duration==-1){
-                            TuningInterface::restart_db_thread();
-                        }
-        }
-        if (emptyPointQueries > 0)
-        {
-            empty_read_duration = run_random_empty_reads(existing_keys, db, emptyPointQueries);
-        }
+    }
+    if (emptyPointQueries > 0)
+    {
+        empty_read_duration = run_random_empty_reads(existing_keys, db, emptyPointQueries);
+    }
 
-        if (nonEmptyPointQueries > 0)
-        {
-            read_duration = run_random_non_empty_reads(existing_keys, db, nonEmptyPointQueries);
-        }
+    if (nonEmptyPointQueries > 0)
+    {
+        read_duration = run_random_non_empty_reads(existing_keys, db, nonEmptyPointQueries);
+    }
 
-        if (rangeQueries > 0)
-        {
-            range_duration = run_range_reads(existing_keys, db, rangeQueries);
-        }
+    if (rangeQueries > 0)
+    {
+        range_duration = run_range_reads(existing_keys, db, rangeQueries);
+    }
 
 
-        std::string statistics = rocksdb_opt.statistics->ToString();
-        std::string io_statistics = rocksdb::get_iostats_context()->ToString();
-//        std::cout << statistics << std::endl;
-//        std::cout << io_statistics << std::endl;
-
-        // Write metrics to the file
-        //format of metrics - empty reads duration, non-empty reads duration, range query duration, write duration, statistics, io_statistics
-        //duration is in ms
-//        metricsFile << empty_read_duration << ","
-//                    << read_duration << ","
-//                    << range_duration << ","
-//                    << write_duration <<std::endl;
-//                    << "IO Statistics:" << io_statistics << std::endl;
-        metricsFile << empty_read_duration << ","
-                    << read_duration << ","
-                    << range_duration << ","
-                    << write_duration << std::endl;
-        epochs++;
-        // Close the metrics file
-        metricsFile.close();
-       return;
+    std::string statistics = rocksdb_opt.statistics->ToString();
+    std::string io_statistics = rocksdb::get_iostats_context()->ToString();
+    metricsFile << empty_read_duration << ","
+                << read_duration << ","
+                << range_duration << ","
+                << write_duration << std::endl;
+    epochs++;
+    metricsFile.close();
+    return;
 
 }
 
@@ -158,14 +146,12 @@ void WorkloadGenerator::append_valid_keys(std::string key_file_path, std::vector
 {
     workloadLoggerThread->debug("Adding new keys to existing key file");
     std::ofstream key_file;
-
     key_file.open(key_file_path, std::ios::app);
 
     for (auto key : new_keys)
     {
         key_file << key << std::endl;
     }
-
     key_file.close();
 }
 

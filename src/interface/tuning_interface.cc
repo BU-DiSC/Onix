@@ -33,58 +33,38 @@ int num_queries = 1000; // Number of queries to perform for measuring performanc
 
 int main(int argc, char * argv[]){
     using namespace clipp;
-    int N = 1000; // Number of records to prepopulate (adjust as needed)
-
-
-
-        std::atomic<bool> ex(false);
-
-
+    int N = 1000; // Number of records to prepopulate
+    std::atomic<bool> ex(false);
     try
-            {
+    {
+        workloadLoggerThread = spdlog::basic_logger_mt("workloadLoggerThread", "logs/workloadLoggerThread.txt");
+    }
+    catch (const spdlog::spdlog_ex &ex)
+    {
+        spdlog::error("Workload Log init failed: {}",ex.what());
+    }
 
-                workloadLoggerThread = spdlog::basic_logger_mt("workloadLoggerThread", "logs/workloadLoggerThread.txt");
-                //tuningParamsLoggerThread = spdlog::basic_logger_mt("tuningParamsLoggerThread", "logs/tuningParamsLoggerThread.txt");
-
-            }
-            catch (const spdlog::spdlog_ex &ex)
-            {
-                spdlog::error("Workload Log init failed: {}",ex.what());
-            }
-
-
-
-    std::string db_path = "database/mlosDb";
     auto cli = (
         option("--N") & value("N", N),
         option("--empty-point-query-percentage") & value("empty_percentage", empty_point_query_percentage),
         option("--non-empty-point-query-percentage") & value("non_empty_percentage", non_empty_point_query_percentage),
         option("--range-query-percentage") & value("range_percentage", range_query_percentage),
         option("--write-query-percentage") & value("write_percentage", write_query_percentage),
-        option("--num-queries") & value("num_queries", num_queries),
-        option("--db_path") & value("db_path", db_path)
-
+        option("--num-queries") & value("num_queries", num_queries)
     );
 
     if (!parse(argc, argv, cli)) {
-//        spdlog::debug(make_man_page(cli, argv[0]));
         return 1;
     }
 
-
-      std::atomic<bool> shouldExit(false);
-      TuneParameters t;
-      Database_Handler dbh{N};
+    std::atomic<bool> shouldExit(false);
+    TuneParameters t;
+    Database_Handler dbh{N};
 
     // Start the parameter tuning thread
     std::thread parameter_tuning_thread(&TuneParameters::tune_parameters,&t,std::ref(shouldExit));
     std::thread workload_running_thread(&Database_Handler::run_workloads,empty_point_query_percentage,
     non_empty_point_query_percentage,range_query_percentage,write_query_percentage,num_queries);
-//    std::thread workload_running_thread(&Database_Handler::run_workloads,&dbh,std::ref(empty_point_query_percentage),
-//                                   std::ref(non_empty_point_query_percentage),std::ref(range_query_percentage),
-//                                   std::ref(write_query_percentage),std::ref(num_queries));
-
-
 
     while(!ex){
         std::this_thread::sleep_for(std::chrono::seconds(2));
@@ -100,6 +80,7 @@ TuningInterface::TuningInterface(){
 
 }
 
+//option 2 - kill thread
 void TuningInterface::restart_db_thread(){
     spdlog::info("kill workload thread");
     workload_running_thread.std::thread::~thread();
@@ -111,7 +92,11 @@ void TuningInterface::restart_db_thread(){
 }
 
 int TuningInterface::tune_db(std::vector<std::string> values){
-    return Database_Handler::TuneDB(values);
+    int e = Database_Handler::TuneDB(values);
+    if (e==-1){
+        restart_db_thread();
+    }
+    return e;
 }
 
 
