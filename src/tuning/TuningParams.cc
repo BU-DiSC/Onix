@@ -47,20 +47,29 @@ void TuneParameters::tune_parameters(std::atomic<bool>& shouldExit) {
 
         int pipe_fd = -1;
         int epochs_pipe_fd =-1;
-        char buffer[1000];
+        char buffer[10000];
         ssize_t read_result;
         std::string optionName;
         std::string optionValue;
-        std::vector<std::string> keyValuePairs;
         while(pipe_fd == -1) {
             sleep(2);
-            pipe_fd = open("passing_params_pipe", O_RDONLY);
+            pipe_fd = open("passing_params_pipe", O_RDONLY | O_TRUNC);
             tuningParamsLoggerThread->error("Failed to open the named pipe. Error: {}", strerror(errno));
         }
 
         while ((read_result = read(pipe_fd, buffer, sizeof(buffer))) > 0) {
-            std::vector<std::string>newKeyValuePairs = parseKeyValuePairs(buffer);
-            keyValuePairs.insert(keyValuePairs.end(),newKeyValuePairs.begin(),newKeyValuePairs.end());
+            std::vector<std::string> keyValuePairs = parseKeyValuePairs(buffer);
+//            spdlog::info("new key value pairs {}",keyValuePairs);
+            std::string keyValuePairsString;
+            for (const auto& pair : keyValuePairs) {
+                keyValuePairsString += pair + ", ";
+            }
+            if (!keyValuePairsString.empty()) {
+                keyValuePairsString.pop_back();
+                keyValuePairsString.pop_back();
+            }
+            spdlog::info("new key value pairs: {}", keyValuePairsString);
+//            keyValuePairs.insert(keyValuePairs.end(),newKeyValuePairs.begin(),newKeyValuePairs.end());
 
         int epochs = signal_tune_db(keyValuePairs);
         std::string pipe_path = "passing_epochs";
@@ -73,7 +82,7 @@ void TuneParameters::tune_parameters(std::atomic<bool>& shouldExit) {
         }
 
         // Open the pipe for writing
-        epochs_pipe_fd = open(pipe_path.c_str(), O_RDWR);
+        epochs_pipe_fd = open(pipe_path.c_str(), O_RDWR | O_TRUNC);
         if (epochs_pipe_fd == -1) {
             spdlog::error("Failed to open the passing_epochs pipe. Error: {}", strerror(errno));
             return ;
