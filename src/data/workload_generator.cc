@@ -63,8 +63,7 @@ void WorkloadGenerator::GenerateWorkload(
         metricsFileRead.close();
     }
 
-    rocksdb::Options rocksdb_opt;
-    rocksdb_opt.statistics = rocksdb::CreateDBStatistics();
+
     WorkloadGenerator workload_generator(db);
 
     int empty_read_duration = 0, read_duration = 0, range_duration = 0;
@@ -76,9 +75,9 @@ void WorkloadGenerator::GenerateWorkload(
         existing_keys = workload_generator.get_all_valid_keys(key_file_path);
     }
 
-    rocksdb_opt.statistics->Reset();
-    rocksdb::get_iostats_context()->Reset();
-    rocksdb::get_perf_context()->Reset();
+//    rocksdb_opt.statistics->Reset();
+//    rocksdb::get_iostats_context()->Reset();
+//    rocksdb::get_perf_context()->Reset();
     if (writeQueries > 0)
     {
         write_duration = run_random_inserts(key_file_path, db, writeQueries);
@@ -109,8 +108,7 @@ void WorkloadGenerator::GenerateWorkload(
     }
 
 
-    std::string statistics = rocksdb_opt.statistics->ToString();
-    std::string io_statistics = rocksdb::get_iostats_context()->ToString();
+
     metricsFile << empty_read_duration << ","
                 << read_duration << ","
                 << range_duration << ","

@@ -2,6 +2,7 @@
 #include "database_handler.hpp"
 #include "rocksdb/db.h"
 #include "rocksdb/utilities/convenience.h"
+#include "rocksdb/sst_file_manager.h"
 #include "rocksdb/options.h"
 #include "workload_generator.hpp"
 #include "spdlog/spdlog.h"
@@ -20,7 +21,7 @@ rocksdb::Options options;
 int epochs=0;
 int key_size = 10;
 int value_size = 100;
-std::atomic<bool> flag(true);
+int num_of_bytes_written = 0;
 std::set<std::string> db_options_set = {"max_open_files",
                                         "max_total_wal_size",
                                         "delete_obsolete_files_period_micros",
@@ -33,6 +34,7 @@ std::set<std::string> db_options_set = {"max_open_files",
 
 Database_Handler::Database_Handler(int N){
     options.create_if_missing = true;
+    options.statistics =  rocksdb::CreateDBStatistics();
     rocksdb::Status status = rocksdb::DB::Open(options, db_path, &db);
 
     if (!status.ok()) {
@@ -51,13 +53,16 @@ Database_Handler::Database_Handler(int N){
 void Database_Handler::run_workloads(int empty_point_query_percentage,
     int non_empty_point_query_percentage, int range_query_percentage, int write_query_percentage, int num_queries ){
     WorkloadGenerator* run_workload= new WorkloadGenerator(db);
-    while(flag){
+    while(true){
         for(int i=0;i<4;i++){
             run_workload -> GenerateWorkload(static_cast<double>(empty_point_query_percentage)*num_queries*0.25f*0.01,
             static_cast<double>(non_empty_point_query_percentage)*num_queries*0.25*0.01,
             static_cast<double>(range_query_percentage)*num_queries*0.25*0.01,
             static_cast<double>(write_query_percentage)*num_queries*0.25*0.01,0,
             key_file_path);
+            num_of_bytes_written = options.statistics->getTickerCount(rocksdb::BYTES_WRITTEN);
+            spdlog::info("statistics - number of blocks compressed {}",options.statistics->getTickerCount(rocksdb::NUMBER_BLOCK_COMPRESSED));
+            spdlog::info("statistics - number of bytes written {}",num_of_bytes_written);
         }
 
     }
@@ -84,8 +89,17 @@ std::string trim(const std::string & source) {
     std::string s(source);
     s.erase(0,s.find_first_not_of(" \n\r\t"));
     s.erase(s.find_last_not_of(" \n\r\t")+1);
-    spdlog::info("param value {}",source);
     return s;
+}
+
+int calculate_wait_time(){
+    int wait_time = 10;
+    num_of_bytes_written = options.statistics->getTickerCount(rocksdb::BYTES_WRITTEN);
+    if (num_of_bytes_written>0) {
+        wait_time=0.0001*num_of_bytes_written;
+    }
+    spdlog::info("wait time {}",wait_time);
+    return wait_time;
 }
 int Database_Handler::TuneDB(std::vector<std::string> keyValuePairs){
     std::string optionName;
@@ -120,12 +134,13 @@ int Database_Handler::TuneDB(std::vector<std::string> keyValuePairs){
     try {
 //        db->SetOptions({{optionName, optionValue},{optionName,optionValue}});
         rocksdb::Status status1 = db->SetOptions(options_OptionsAPI);
-        rocksdb::Status status2 = db->SetDBOptions(options_DbOptionsAPI);
+
         if (!status1.ok()) {
                             std::cerr << "Failed to set options: " << status1.ToString() << std::endl;
                         }
+        rocksdb::Status status2 = db->SetDBOptions(options_DbOptionsAPI);
         if (!status2.ok()) {
-                    std::cerr << "Failed to set options: " << status2.ToString() << std::endl;
+                    std::cerr << "Failed to set db options: " << status2.ToString() << std::endl;
                 }
     } catch(const std::exception& e) {
         std::cerr << "Exception caught: " << e.what() << std::endl;
@@ -135,21 +150,19 @@ int Database_Handler::TuneDB(std::vector<std::string> keyValuePairs){
 
     spdlog::info("Tuning parameters complete...");
     int targetEpochs = epochs+10;
-    int starting_epoch=epochs;
     int x=0;
 
-    std::this_thread::sleep_for(std::chrono::seconds(20));
+    std::this_thread::sleep_for(std::chrono::seconds(calculate_wait_time()));
 
-    while (x<20 && epochs!=starting_epoch && epochs < targetEpochs){
-        std::this_thread::sleep_for(std::chrono::seconds(5));
+    while (x<20 && epochs < targetEpochs){
+        std::this_thread::sleep_for(std::chrono::seconds(calculate_wait_time()));
         x+=1;
     }
-
    int e=std::max(epochs-1,0); //adjust indexing
    if (epochs<targetEpochs){ //database has hanged
     spdlog::info("going in restart db");
 //    restart_db();
-    e=-1;
+    e=epochs*-1;
    }
    return e;
 }
