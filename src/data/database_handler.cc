@@ -138,16 +138,16 @@ int Database_Handler::TuneDB(std::vector<std::string> keyValuePairs){
         rocksdb::Status status1 = db->SetOptions(options_OptionsAPI);
 
         if (!status1.ok()) {
-                            std::cerr << "Failed to set options: " << status1.ToString() << std::endl;
+                workloadLoggerThread->error("Failed to set options: {}", status1.ToString() );
                         }
         rocksdb::Status status2 = db->SetDBOptions(options_DbOptionsAPI);
         if (!status2.ok()) {
-                    std::cerr << "Failed to set db options: " << status2.ToString() << std::endl;
+                    sworkloadLoggerThread->error("Failed to set db options:{} ",status2.ToString());
                 }
     } catch(const std::exception& e) {
-        std::cerr << "Exception caught: " << e.what() << std::endl;
+        workloadLoggerThread->error("Exception caught: {}",e.what());
     } catch(...) {
-        std::cerr << "Unknown exception caught." << std::endl;
+        workloadLoggerThread->error("Unknown exception caught.");
     }
 
     workloadLoggerThread->info("Tuning parameters complete...");
@@ -157,6 +157,7 @@ int Database_Handler::TuneDB(std::vector<std::string> keyValuePairs){
     std::this_thread::sleep_for(std::chrono::seconds(calculate_wait_time()));
 
     while (x<20 && epochs < targetEpochs){
+        workloadLoggerThread->info("waiting");
         std::this_thread::sleep_for(std::chrono::seconds(calculate_wait_time()));
         x+=1;
     }
