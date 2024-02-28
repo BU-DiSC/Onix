@@ -27,7 +27,7 @@ logging.basicConfig(filename='../../build/logs/mlos_logger.txt',
 logging.info("Running mlos")
 
 logger = logging.getLogger('mlosLogger')
-
+pd.set_option('display.max_columns', None)
 def cost_model(index):
     performance_data = pd.read_csv('../../build/performance/performance_metrics.csv', header=None, names=["empty_reads", "non_empty_reads", "range_reads", "writes"])
     return performance_data.iloc[index:].mean().sum()
@@ -47,7 +47,8 @@ default_values = {
     "max_bytes_for_level_multiplier": 10,
     "write_buffer_size": 64 << 20,
     "level0_file_num_compaction_trigger": 4,
-    "max_bytes_for_level_base": 256 * 1048576
+    "max_bytes_for_level_base": 256 * 1048576,
+    "score":0
 }
 
 
