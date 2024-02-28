@@ -142,7 +142,7 @@ int Database_Handler::TuneDB(std::vector<std::string> keyValuePairs){
                         }
         rocksdb::Status status2 = db->SetDBOptions(options_DbOptionsAPI);
         if (!status2.ok()) {
-                    sworkloadLoggerThread->error("Failed to set db options:{} ",status2.ToString());
+                    workloadLoggerThread->error("Failed to set db options:{} ",status2.ToString());
                 }
     } catch(const std::exception& e) {
         workloadLoggerThread->error("Exception caught: {}",e.what());
