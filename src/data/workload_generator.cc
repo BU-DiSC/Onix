@@ -107,12 +107,11 @@ void WorkloadGenerator::GenerateWorkload(
         range_duration = run_range_reads(existing_keys, db, rangeQueries);
     }
 
-
-
     metricsFile << empty_read_duration << ","
                 << read_duration << ","
                 << range_duration << ","
                 << write_duration << std::endl;
+    workloadLoggerThread->info("metrics: {}, {}, {}, {}",empty_read_duration,read_duration,range_duration,write_duration);
     epochs++;
     metricsFile.close();
     return;

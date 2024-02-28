@@ -19,9 +19,6 @@
 
 
 std::shared_ptr<spdlog::logger> workloadLoggerThread = nullptr;
-std::shared_ptr<spdlog::logger> tuningParamsLoggerThread = nullptr;
-
-
 std::thread parameter_tuning_thread;
 std::thread workload_running_thread;
 int empty_point_query_percentage = 25;
@@ -82,9 +79,9 @@ TuningInterface::TuningInterface(){
 
 //option 2 - kill thread
 void TuningInterface::restart_db_thread(){
-    spdlog::info("kill workload thread");
+    workloadLoggerThread->info("kill workload thread");
     workload_running_thread.std::thread::~thread();
-    spdlog::info("restart workload thread");
+    workloadLoggerThread->info("restart workload thread");
     std::thread workload_running_thread(&Database_Handler::run_workloads,empty_point_query_percentage,
         non_empty_point_query_percentage,range_query_percentage,write_query_percentage,num_queries);
         workload_running_thread.detach();

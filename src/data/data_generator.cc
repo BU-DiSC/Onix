@@ -16,6 +16,7 @@ using namespace chrono;
 
 extern std::string key_file_path;
 extern rocksdb::DB* db;
+extern std::shared_ptr<spdlog::logger> workloadLoggerThread;
 DataGenerator::DataGenerator(rocksdb::DB *db1, std::string key_file_path1) {
     db = db1;
     key_file_path = key_file_path1;
@@ -38,7 +39,7 @@ rocksdb::Status DataGenerator::bulkLoader(int N, int key_size, int value_size) {
     rocksdb::Status status = db->Write(WriteOptions(), &batch);
     keyfile.close();
     if (!status.ok()) {
-        spdlog::debug("Failed to perform bulk load: " + status.ToString());
+        workloadLoggerThread->debug("Failed to perform bulk load: " + status.ToString());
     }
     keyfile.close();
     return status;

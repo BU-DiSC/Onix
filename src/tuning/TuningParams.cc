@@ -14,17 +14,10 @@
 #include <sys/stat.h>
 
 
-extern std::shared_ptr<spdlog::logger> tuningParamsLoggerThread;
+extern std::shared_ptr<spdlog::logger> workloadLoggerThread;
 
 TuneParameters::TuneParameters(){
-     try
-        {
-            tuningParamsLoggerThread = spdlog::basic_logger_mt("tuningParamsLoggerThread", "logs/tuningParamsLoggerThread.txt");
-        }
-        catch (const spdlog::spdlog_ex &ex)
-        {
-            spdlog::error("Workload Log init failed: {}",ex.what());
-        }
+
 }
 
 std::vector<std::string> TuneParameters::parseKeyValuePairs(const std::string& input) {
@@ -54,12 +47,11 @@ void TuneParameters::tune_parameters(std::atomic<bool>& shouldExit) {
         while(pipe_fd == -1) {
             sleep(2);
             pipe_fd = open("passing_params_pipe", O_RDONLY | O_TRUNC);
-            tuningParamsLoggerThread->error("Failed to open the named pipe. Error: {}", strerror(errno));
+            workloadLoggerThread->error("Failed to open the named pipe. Error: {}", strerror(errno));
         }
 
         while ((read_result = read(pipe_fd, buffer, sizeof(buffer))) > 0) {
             std::vector<std::string> keyValuePairs = parseKeyValuePairs(buffer);
-//            spdlog::info("new key value pairs {}",keyValuePairs);
             std::string keyValuePairsString;
             for (const auto& pair : keyValuePairs) {
                 keyValuePairsString += pair + ", ";
@@ -69,6 +61,7 @@ void TuneParameters::tune_parameters(std::atomic<bool>& shouldExit) {
                 keyValuePairsString.pop_back();
             }
             spdlog::info("new key value pairs: {}", keyValuePairsString);
+            workloadLoggerThread->info("new key value pairs: {}", keyValuePairsString);
 //            keyValuePairs.insert(keyValuePairs.end(),newKeyValuePairs.begin(),newKeyValuePairs.end());
 
         int epochs = signal_tune_db(keyValuePairs);
@@ -76,7 +69,7 @@ void TuneParameters::tune_parameters(std::atomic<bool>& shouldExit) {
 
         if (access(pipe_path.c_str(), F_OK) == -1) {
             if (mkfifo(pipe_path.c_str(), 0666) == -1) {
-                spdlog::error("Failed to create the passing_epochs pipe. Error: {}", strerror(errno));
+                workloadLoggerThread->error("Failed to create the passing_epochs pipe. Error: {}", strerror(errno));
                 return ;
             }
         }
@@ -84,13 +77,13 @@ void TuneParameters::tune_parameters(std::atomic<bool>& shouldExit) {
         // Open the pipe for writing
         epochs_pipe_fd = open(pipe_path.c_str(), O_RDWR | O_TRUNC);
         if (epochs_pipe_fd == -1) {
-            spdlog::error("Failed to open the passing_epochs pipe. Error: {}", strerror(errno));
+            workloadLoggerThread->error("Failed to open the passing_epochs pipe. Error: {}", strerror(errno));
             return ;
         }
         std::ostringstream oss;
         oss << epochs;
         write(epochs_pipe_fd, oss.str().c_str(), oss.str().length());
-        spdlog::info("Reported epochs: {}", epochs);
+        workloadLoggerThread->info("Reported epochs: {}", epochs);
         }
         close(pipe_fd);
         close(epochs_pipe_fd);
