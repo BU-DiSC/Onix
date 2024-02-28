@@ -99,9 +99,7 @@ int calculate_wait_time(){
     if (0.0000001*num_of_bytes_written>10) {
         wait_time=0.0000001*num_of_bytes_written;
     }
-    if (wait_time>240){
-        wait_time=240;
-    }
+
     workloadLoggerThread->info("wait time {}",wait_time);
     return wait_time;
 }
