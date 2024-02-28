@@ -96,7 +96,7 @@ int calculate_wait_time(){
     int wait_time = 10;
     num_of_bytes_written = options.statistics->getTickerCount(rocksdb::BYTES_WRITTEN);
     if (num_of_bytes_written>0) {
-        wait_time=0.000001*num_of_bytes_written;
+        wait_time=0.0000001*num_of_bytes_written;
     }
     spdlog::info("wait time {}",wait_time);
     return wait_time;
