@@ -78,14 +78,14 @@ void WorkloadGenerator::GenerateWorkload(
 //    rocksdb_opt.statistics->Reset();
 //    rocksdb::get_iostats_context()->Reset();
 //    rocksdb::get_perf_context()->Reset();
+//    if (writeQueries > 0)
+//    {
+//        write_duration = run_random_inserts(key_file_path, db, writeQueries);
+//        if (write_duration==-1){
+//            TuningInterface::restart_db_thread();
+//        }
+//    }
     if (writeQueries > 0)
-    {
-        write_duration = run_random_inserts(key_file_path, db, writeQueries);
-        if (write_duration==-1){
-            TuningInterface::restart_db_thread();
-        }
-    }
-    else if (updateQueries > 0)
     {
         write_duration = run_random_updates(existing_keys,key_file_path, db, updateQueries);
         if (write_duration==-1){

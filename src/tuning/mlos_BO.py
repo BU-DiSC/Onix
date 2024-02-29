@@ -248,7 +248,6 @@ def run_optimization():
         restart_indexes.append(-index)
         target_value=float('inf')
     else:
-        restart_indexes.append(index)
         target_value = cost_model(index)
     optimizer.register(suggested_value, pd.Series([target_value]))
 
@@ -310,13 +309,13 @@ fig_writes = px.line(df, x=df.index, y="Writes", title="Writes")
                      
 for restart_index in restart_indexes:
     fig_empty_reads.add_trace(go.Scatter(x=[restart_index], y=[df["Empty Reads"].iloc[restart_index]],
-                                         mode='markers', marker=dict(color='red',size=10), name='Restart'))
+                                         mode='markers', marker=dict(color='red',size=10)))
     fig_non_empty_reads.add_trace(go.Scatter(x=[restart_index], y=[df["Non-Empty Reads"].iloc[restart_index]],
-                                            mode='markers', marker=dict(color='red',size=10), name='Restart'))
+                                            mode='markers', marker=dict(color='red',size=10)))
     fig_range_reads.add_trace(go.Scatter(x=[restart_index], y=[df["Range Reads"].iloc[restart_index]],
-                                         mode='markers', marker=dict(color='red',size=10), name='Restart'))
+                                         mode='markers', marker=dict(color='red',size=10)))
     fig_writes.add_trace(go.Scatter(x=[restart_index], y=[df["Writes"].iloc[restart_index]],
-                                    mode='markers', marker=dict(color='red',size=10), name='Restart'))
+                                    mode='markers', marker=dict(color='red',size=10)))
 
 
 fig_empty_reads.update_xaxes(title_text='Iterations')
