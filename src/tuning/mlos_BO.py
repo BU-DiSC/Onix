@@ -2,8 +2,8 @@
 # coding: utf-8
 
 # In[32]:
-
-
+import plotly.graph_objects as go
+from tabulate import tabulate
 import mlos_core.optimizers
 import ConfigSpace as CS
 from ConfigSpace import UniformIntegerHyperparameter
@@ -236,12 +236,19 @@ restart_indexes=[]
 def run_optimization():
     suggested_value = optimizer.suggest()
     pass_values_to_interface(suggested_value)
+    suggested_values_df_table = tabulate(suggested_value, headers='keys', tablefmt='pretty')
+    logging.info(f"observations {suggested_values_df_table}")
+    delta_df = suggested_value.copy()
+    for column in delta_df.columns:
+        default_value = default_values[column]
+        delta_df[column] = delta_df[column] - default_value
     index=read_epochs_pipe()
     time.sleep(5)
     if index<0:
         restart_indexes.append(-index)
         target_value=float('inf')
     else:
+        restart_indexes.append(index)
         target_value = cost_model(index)
     optimizer.register(suggested_value, pd.Series([target_value]))
 
@@ -251,19 +258,11 @@ for i in range(n_iterations):
     logging.info(f"epoch:{i}")
     run_optimization()
 
-
-# In[ ]:
-
-
 observations_df = optimizer.get_observations()
+observations_df_table = tabulate(observations_df, headers='keys', tablefmt='pretty')
 
-
-# In[ ]:
-
-
-logging.info(f"observations {observations_df}")
-
-
+logging.info(f"observations {observations_df_table}")
+logging.info(f"restart indexes {restart_indexes}")
 # In[ ]:
 
 
@@ -275,8 +274,8 @@ for column in delta_df.columns:
 
 # In[ ]:
 
-
-logging.info(f"delat df {delta_df}")
+delta_df_table = tabulate(delta_df, headers='keys', tablefmt='pretty')
+logging.info(f"delat df {delta_df_table}")
 
 
 # In[ ]:
@@ -295,13 +294,13 @@ pass_values_to_interface(optimum_value)
 # In[ ]:
 
 
-logging.info(f"optimum value reported {optimum_value}")
+logging.info(f"optimum value reported {tabulate(optimum_value, headers='keys', tablefmt='pretty')}")
 
 
 # In[ ]:
 
 data_url = '../../build/performance/performance_metrics.csv'
-df = pd.read_csv(data_url, header=None, names=["Empty Reads", "Non-Empty Reads", "Range Reads", "Writes"]).iloc[-100:]
+df = pd.read_csv(data_url, header=None, names=["Empty Reads", "Non-Empty Reads", "Range Reads", "Writes"])
 
 # Plot Empty Reads\n",
 fig_empty_reads = px.line(df, x=df.index, y="Empty Reads", title="Empty Reads")
@@ -311,13 +310,13 @@ fig_writes = px.line(df, x=df.index, y="Writes", title="Writes")
                      
 for restart_index in restart_indexes:
     fig_empty_reads.add_trace(go.Scatter(x=[restart_index], y=[df["Empty Reads"].iloc[restart_index]],
-                                         mode='markers', marker=dict(color='red'), name='Restart'))
+                                         mode='markers', marker=dict(color='red',size=10), name='Restart'))
     fig_non_empty_reads.add_trace(go.Scatter(x=[restart_index], y=[df["Non-Empty Reads"].iloc[restart_index]],
-                                            mode='markers', marker=dict(color='red'), name='Restart'))
+                                            mode='markers', marker=dict(color='red',size=10), name='Restart'))
     fig_range_reads.add_trace(go.Scatter(x=[restart_index], y=[df["Range Reads"].iloc[restart_index]],
-                                         mode='markers', marker=dict(color='red'), name='Restart'))
+                                         mode='markers', marker=dict(color='red',size=10), name='Restart'))
     fig_writes.add_trace(go.Scatter(x=[restart_index], y=[df["Writes"].iloc[restart_index]],
-                                    mode='markers', marker=dict(color='red'), name='Restart'))
+                                    mode='markers', marker=dict(color='red',size=10), name='Restart'))
 
 
 fig_empty_reads.update_xaxes(title_text='Iterations')

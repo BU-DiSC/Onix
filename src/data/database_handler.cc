@@ -156,7 +156,7 @@ int Database_Handler::TuneDB(std::vector<std::string> keyValuePairs){
 
     std::this_thread::sleep_for(std::chrono::seconds(calculate_wait_time()));
 
-    while (x<20 && epochs < targetEpochs){
+    while (x<10 && epochs < targetEpochs){
         workloadLoggerThread->info("waiting");
         std::this_thread::sleep_for(std::chrono::seconds(calculate_wait_time()));
         x+=1;
