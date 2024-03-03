@@ -39,13 +39,14 @@ Database_Handler::Database_Handler(int N){
     rocksdb::Status status = rocksdb::DB::Open(options, db_path, &db);
 
     if (!status.ok()) {
+        spdlog::debug("Failed to open database: " + status.ToString() );
         workloadLoggerThread->debug("Failed to open database: " + status.ToString() );
         return;
     }
     DataGenerator *prePopulater = new DataGenerator(db,key_file_path);
     status = prePopulater->bulkLoader(N, key_size, value_size);
     if (!status.ok()) {
-            workloadLoggerThread->debug("Failed to bulk load database: ",status.ToString());
+            spdlog::debug("Failed to bulk load database: ",status.ToString());
             return;
     }
 }
@@ -61,9 +62,11 @@ void Database_Handler::run_workloads(int empty_point_query_percentage,
             static_cast<double>(range_query_percentage)*num_queries*0.25*0.01,
             static_cast<double>(write_query_percentage)*num_queries*0.25*0.01,0,
             key_file_path);
-            num_of_bytes_written = options.statistics->getTickerCount(rocksdb::BYTES_WRITTEN);
-            workloadLoggerThread->info("statistics - number of blocks compressed {}",options.statistics->getTickerCount(rocksdb::NUMBER_BLOCK_COMPRESSED));
-            workloadLoggerThread->info("statistics - number of bytes written {}",num_of_bytes_written);
+            std::string stats;
+            db->GetProperty("rocksdb.stats",&stats);
+             workloadLoggerThread->info("compaction stats {}",stats.c_str());
+//            num_of_bytes_written = options.statistics->getTickerCount(rocksdb::BYTES_WRITTEN);
+//            workloadLoggerThread->info("statistics - number of bytes written {}",num_of_bytes_written);
         }
 
     }
@@ -74,15 +77,15 @@ void Database_Handler::restart_db(){
     workloadLoggerThread->info("signal db restart 1");
     rocksdb::CancelAllBackgroundWork(db,true);
     workloadLoggerThread->info("signal db restart 2");
-    std::this_thread::sleep_for (std::chrono::seconds(10));
+    std::this_thread::sleep_for (std::chrono::seconds(5));
     db->Close();
-    std::this_thread::sleep_for (std::chrono::seconds(10));
+    std::this_thread::sleep_for (std::chrono::seconds(5));
     workloadLoggerThread->info("signal db restart 3");
     delete db;
     workloadLoggerThread->info("signal db restart 4");
     rocksdb::Status status = rocksdb::DB::Open(options, db_path, &db);
     workloadLoggerThread->info("signal db restart 5");
-    std::this_thread::sleep_for(std::chrono::seconds(10));
+    std::this_thread::sleep_for(std::chrono::seconds(5));
     workloadLoggerThread->info("signal db restart 6");
 
 }
@@ -94,6 +97,8 @@ std::string trim(const std::string & source) {
 }
 
 int calculate_wait_time(){
+    spdlog::info("waiting 2 secs");
+    return 2;
     int wait_time = 10;
     num_of_bytes_written = options.statistics->getTickerCount(rocksdb::BYTES_WRITTEN);
     if (0.0000001*num_of_bytes_written>10) {
@@ -108,7 +113,9 @@ int Database_Handler::TuneDB(std::vector<std::string> keyValuePairs){
     std::string optionValue;
     std::unordered_map<std::string, std::string> options_OptionsAPI;
     std::unordered_map<std::string, std::string> options_DbOptionsAPI;
-    for (const auto& keyValuePair : keyValuePairs) {
+    spdlog::info("len key value {}",keyValuePairs.size());
+    for (const auto& keyValuePair : keyValuePairs){
+        spdlog::info("next pair {}",keyValuePair);
         // Parse each key=value pair
         char* token = std::strtok(const_cast<char*>(keyValuePair.c_str()), "=");
         if (token != nullptr) {
@@ -128,6 +135,7 @@ int Database_Handler::TuneDB(std::vector<std::string> keyValuePairs){
 
             }
 
+            spdlog::info("new parameter {} {}",optionName,optionValue);
             workloadLoggerThread->info("new parameter {} {}",optionName,optionValue);
 
         }
@@ -138,10 +146,12 @@ int Database_Handler::TuneDB(std::vector<std::string> keyValuePairs){
         rocksdb::Status status1 = db->SetOptions(options_OptionsAPI);
 
         if (!status1.ok()) {
+                spdlog::error("Failed to set options: {}", status1.ToString() );
                 workloadLoggerThread->error("Failed to set options: {}", status1.ToString() );
                         }
         rocksdb::Status status2 = db->SetDBOptions(options_DbOptionsAPI);
         if (!status2.ok()) {
+                    spdlog::error("Failed to set db options:{} ",status2.ToString());
                     workloadLoggerThread->error("Failed to set db options:{} ",status2.ToString());
                 }
     } catch(const std::exception& e) {
@@ -150,15 +160,16 @@ int Database_Handler::TuneDB(std::vector<std::string> keyValuePairs){
         workloadLoggerThread->error("Unknown exception caught.");
     }
 
+    spdlog::info("Tuning parameters complete...");
     workloadLoggerThread->info("Tuning parameters complete...");
     int targetEpochs = epochs+10;
     int x=0;
 
-    std::this_thread::sleep_for(std::chrono::seconds(calculate_wait_time()));
+    std::this_thread::sleep_for(std::chrono::seconds(2));
 
     while (x<10 && epochs < targetEpochs){
         workloadLoggerThread->info("waiting");
-        std::this_thread::sleep_for(std::chrono::seconds(calculate_wait_time()));
+        std::this_thread::sleep_for(std::chrono::seconds(2));
         x+=1;
     }
    int e=std::max(epochs-1,0); //adjust indexing

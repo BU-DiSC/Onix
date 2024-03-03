@@ -87,7 +87,7 @@ void WorkloadGenerator::GenerateWorkload(
 //    }
     if (writeQueries > 0)
     {
-        write_duration = run_random_updates(existing_keys,key_file_path, db, updateQueries);
+        write_duration = run_random_updates(existing_keys,key_file_path, db, writeQueries);
         if (write_duration==-1){
             TuningInterface::restart_db_thread();
         }
