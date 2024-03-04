@@ -77,15 +77,15 @@ void Database_Handler::restart_db(){
     workloadLoggerThread->info("signal db restart 1");
     rocksdb::CancelAllBackgroundWork(db,true);
     workloadLoggerThread->info("signal db restart 2");
-    std::this_thread::sleep_for (std::chrono::seconds(5));
+//    std::this_thread::sleep_for (std::chrono::seconds(5));
     db->Close();
-    std::this_thread::sleep_for (std::chrono::seconds(5));
+//    std::this_thread::sleep_for (std::chrono::seconds(5));
     workloadLoggerThread->info("signal db restart 3");
     delete db;
     workloadLoggerThread->info("signal db restart 4");
     rocksdb::Status status = rocksdb::DB::Open(options, db_path, &db);
     workloadLoggerThread->info("signal db restart 5");
-    std::this_thread::sleep_for(std::chrono::seconds(5));
+//    std::this_thread::sleep_for(std::chrono::seconds(5));
     workloadLoggerThread->info("signal db restart 6");
 
 }
@@ -97,7 +97,7 @@ std::string trim(const std::string & source) {
 }
 
 int calculate_wait_time(){
-    spdlog::info("waiting 2 secs");
+    spdlog::info("waiting 2 milli secs");
     return 2;
     int wait_time = 10;
     num_of_bytes_written = options.statistics->getTickerCount(rocksdb::BYTES_WRITTEN);
@@ -165,11 +165,11 @@ int Database_Handler::TuneDB(std::vector<std::string> keyValuePairs){
     int targetEpochs = epochs+10;
     int x=0;
 
-    std::this_thread::sleep_for(std::chrono::seconds(2));
+    std::this_thread::sleep_for(std::chrono::milliseconds(2));
 
     while (x<10 && epochs < targetEpochs){
         workloadLoggerThread->info("waiting");
-        std::this_thread::sleep_for(std::chrono::seconds(2));
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
         x+=1;
     }
    int e=std::max(epochs-1,0); //adjust indexing
