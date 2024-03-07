@@ -14,6 +14,7 @@
 #include "spdlog/sinks/basic_file_sink.h"
 #include "spdlog/async.h"
 #include "tuning_interface.hpp"
+#include "zipf.hpp"
 #include <clipp.h>
 #include <fstream>
 #include <string>
@@ -21,8 +22,7 @@
 #include <algorithm>
 #include <fstream>
 #include <iterator>
-
-#include "zipf.hpp"
+#include <limits>
 
 #define PAGESIZE 4096
 
@@ -32,6 +32,7 @@ extern rocksdb::DB *db;
 extern int epochs;
 extern std::shared_ptr<spdlog::logger> workloadLoggerThread;
 extern std::string db_path;
+
 
 std::string performance_metrics_file_path = "performance/performance_metrics.csv";
 
@@ -66,8 +67,9 @@ void WorkloadGenerator::GenerateWorkload(
 
     WorkloadGenerator workload_generator(db);
 
-    int empty_read_duration = 0, read_duration = 0, range_duration = 0;
-    int write_duration = 0, compact_duration = 0;
+    double empty_read_duration = 0, read_duration = 0, range_duration = 0, write_duration = 0;
+    double total_empty_read_duration = 0, total_read_duration = 0, total_range_duration = 0, total_write_duration = 0;
+    int total_writeQueries = 0, total_emptyPointQueries = 0, total_nonEmptyPointQueries = 0, total_rangeQueries = 0;
     std::vector<std::string> existing_keys;
 
     if ((nonEmptyPointQueries > 0) || (rangeQueries > 0 || emptyPointQueries > 0))
@@ -78,40 +80,73 @@ void WorkloadGenerator::GenerateWorkload(
 //    rocksdb_opt.statistics->Reset();
 //    rocksdb::get_iostats_context()->Reset();
 //    rocksdb::get_perf_context()->Reset();
-//    if (writeQueries > 0)
-//    {
-//        write_duration = run_random_inserts(key_file_path, db, writeQueries);
-//        if (write_duration==-1){
-//            TuningInterface::restart_db_thread();
-//        }
-//    }
-    if (writeQueries > 0)
-    {
-        write_duration = run_random_updates(existing_keys,key_file_path, db, writeQueries);
-        if (write_duration==-1){
-            TuningInterface::restart_db_thread();
-        }
-    }
+   if (writeQueries > 0)
+   {
+       write_duration = run_random_inserts(key_file_path, db, writeQueries);
+       if (write_duration==-1){
+           workloadLoggerThread->info("writes failed");
+           write_duration= std::numeric_limits<int>::infinity();
+           TuningInterface::restart_db_thread();
+       }
+       else{
+       total_write_duration+=write_duration;
+       total_writeQueries+=writeQueries;
+       }
+       
+
+   }
+//     if (writeQueries > 0)
+//     {
+//         write_duration = run_random_updates(existing_keys,key_file_path, db, writeQueries);
+//         if (write_duration==-1){
+//             TuningInterface::restart_db_thread();
+//         }
+//         total_writeQueries+=writeQueries;
+//         total_write_duration+=write_duration;
+        
+//     }
     if (emptyPointQueries > 0)
     {
         empty_read_duration = run_random_empty_reads(existing_keys, db, emptyPointQueries);
+        total_emptyPointQueries+=emptyPointQueries;
+        total_empty_read_duration+=empty_read_duration;
+
     }
 
     if (nonEmptyPointQueries > 0)
     {
         read_duration = run_random_non_empty_reads(existing_keys, db, nonEmptyPointQueries);
+        total_nonEmptyPointQueries+=nonEmptyPointQueries;
+        total_read_duration+=read_duration;
     }
 
     if (rangeQueries > 0)
     {
         range_duration = run_range_reads(existing_keys, db, rangeQueries);
+        total_rangeQueries+=rangeQueries;
+        total_range_duration+=range_duration;
+
     }
+    
+    double total_throughput_cumulative = (total_emptyPointQueries+total_nonEmptyPointQueries+total_rangeQueries+total_writeQueries)/(total_empty_read_duration+total_read_duration+total_range_duration+total_write_duration);
+    double total_throughput_instant = (emptyPointQueries+nonEmptyPointQueries+rangeQueries+writeQueries)/(empty_read_duration+read_duration+range_duration+write_duration);
 
     metricsFile << empty_read_duration << ","
                 << read_duration << ","
                 << range_duration << ","
-                << write_duration << std::endl;
-    workloadLoggerThread->info("metrics: {}, {}, {}, {}",empty_read_duration,read_duration,range_duration,write_duration);
+                << write_duration << ","
+                << emptyPointQueries/empty_read_duration << ","
+                << nonEmptyPointQueries/read_duration << ","
+                << rangeQueries/range_duration << ","
+                << writeQueries/write_duration << ","
+                << total_throughput_instant << ","
+                << total_emptyPointQueries/total_empty_read_duration << ","
+                << total_nonEmptyPointQueries/total_read_duration << ","
+                << total_rangeQueries/total_range_duration << ","
+                << total_writeQueries/total_write_duration << ","
+                << total_throughput_cumulative << std::endl;
+
+    workloadLoggerThread->info("current throughput metrics: {}, {}, {}",epochs, total_throughput_instant, total_throughput_cumulative );
     epochs++;
     metricsFile.close();
     return;
@@ -278,7 +313,8 @@ int WorkloadGenerator::run_random_inserts(std::string key_file_path, rocksdb::DB
             writes_failed++;
             if (writes_failed > max_writes_failed)
             {
-                workloadLoggerThread->error("10\% of total writes have failed, aborting");
+                workloadLoggerThread->error("10\% of total writes have failed");
+                break;
 //                return -1;
 //                db->Close();
 //                delete db;
@@ -302,7 +338,7 @@ int WorkloadGenerator::run_random_inserts(std::string key_file_path, rocksdb::DB
 
 int WorkloadGenerator::run_random_updates(std::vector<std::string> existing_keys,std::string key_file_path, rocksdb::DB * db, int num_queries)
 {
-    workloadLoggerThread->info("{} Write Queries", num_queries);
+    workloadLoggerThread->info("{} Update Queries", num_queries);
     rocksdb::WriteOptions write_opt;
     rocksdb::Status status;
     write_opt.no_slowdown = false; //> enabling this will make some insertions fail
@@ -334,7 +370,7 @@ int WorkloadGenerator::run_random_updates(std::vector<std::string> existing_keys
     }
     auto end_write_time = std::chrono::high_resolution_clock::now();
     auto write_duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_write_time - start_write_time);
-    workloadLoggerThread->info("writes time elapsed : {} ms", write_duration.count());
+    workloadLoggerThread->info("updates time elapsed : {} ms", write_duration.count());
     workloadLoggerThread->debug("Flushing DB...");
     rocksdb::FlushOptions flush_opt;
     flush_opt.wait = true;

@@ -65,8 +65,6 @@ void Database_Handler::run_workloads(int empty_point_query_percentage,
             std::string stats;
             db->GetProperty("rocksdb.stats",&stats);
              workloadLoggerThread->info("compaction stats {}",stats.c_str());
-//            num_of_bytes_written = options.statistics->getTickerCount(rocksdb::BYTES_WRITTEN);
-//            workloadLoggerThread->info("statistics - number of bytes written {}",num_of_bytes_written);
         }
 
     }
@@ -114,46 +112,44 @@ int Database_Handler::TuneDB(std::vector<std::string> keyValuePairs){
     std::unordered_map<std::string, std::string> options_OptionsAPI;
     std::unordered_map<std::string, std::string> options_DbOptionsAPI;
     spdlog::info("len key value {}",keyValuePairs.size());
-    for (const auto& keyValuePair : keyValuePairs){
-        spdlog::info("next pair {}",keyValuePair);
-        // Parse each key=value pair
-        char* token = std::strtok(const_cast<char*>(keyValuePair.c_str()), "=");
-        if (token != nullptr) {
-            optionName = token;
-            if (optionName == "exit") {
-                break;
-            }
+    for (const auto& keyValuePair : keyValuePairs) {
+        spdlog::info("next pair {}", keyValuePair);
+        size_t pos = keyValuePair.find('=');
+        if (pos != std::string::npos) {
+            std::string optionName = keyValuePair.substr(0, pos);
+            std::string optionValue = keyValuePair.substr(pos + 1);
             trim(optionName);
-            optionValue = std::strtok(nullptr, "=");
             trim(optionValue);
 
-            if (db_options_set.find(optionName) != db_options_set.end()){
+            if (db_options_set.find(optionName) != db_options_set.end()) {
                 options_DbOptionsAPI[optionName] = optionValue;
-            }
-            else{
+            } else {
                 options_OptionsAPI[optionName] = optionValue;
-
             }
 
-            spdlog::info("new parameter {} {}",optionName,optionValue);
-            workloadLoggerThread->info("new parameter {} {}",optionName,optionValue);
-
+            spdlog::info("new parameter {} {}", optionName, optionValue);
+            workloadLoggerThread->info("new parameter {} {}", optionName, optionValue);
         }
     }
     workloadLoggerThread->info("Tuning parameter...");
     try {
-//        db->SetOptions({{optionName, optionValue},{optionName,optionValue}});
-        rocksdb::Status status1 = db->SetOptions(options_OptionsAPI);
-
-        if (!status1.ok()) {
+        if (!options_OptionsAPI.empty()){
+            
+            rocksdb::Status status1 = db->SetOptions(options_OptionsAPI);
+            
+            if (!status1.ok()) {
                 spdlog::error("Failed to set options: {}", status1.ToString() );
                 workloadLoggerThread->error("Failed to set options: {}", status1.ToString() );
-                        }
-        rocksdb::Status status2 = db->SetDBOptions(options_DbOptionsAPI);
-        if (!status2.ok()) {
-                    spdlog::error("Failed to set db options:{} ",status2.ToString());
-                    workloadLoggerThread->error("Failed to set db options:{} ",status2.ToString());
-                }
+            }
+        }
+
+        if (!options_DbOptionsAPI.empty()){
+            rocksdb::Status status2 = db->SetDBOptions(options_DbOptionsAPI);
+            if (!status2.ok()) {
+                        spdlog::error("Failed to set db options:{} ",status2.ToString());
+                        workloadLoggerThread->error("Failed to set db options:{} ",status2.ToString());
+            }
+        }
     } catch(const std::exception& e) {
         workloadLoggerThread->error("Exception caught: {}",e.what());
     } catch(...) {
@@ -164,10 +160,8 @@ int Database_Handler::TuneDB(std::vector<std::string> keyValuePairs){
     workloadLoggerThread->info("Tuning parameters complete...");
     int targetEpochs = epochs+10;
     int x=0;
-
     std::this_thread::sleep_for(std::chrono::milliseconds(2));
-
-    while (x<10 && epochs < targetEpochs){
+    while (x<1000 && epochs < targetEpochs){
         workloadLoggerThread->info("waiting");
         std::this_thread::sleep_for(std::chrono::milliseconds(2));
         x+=1;
@@ -175,8 +169,11 @@ int Database_Handler::TuneDB(std::vector<std::string> keyValuePairs){
    int e=std::max(epochs-1,0); //adjust indexing
    if (epochs<targetEpochs){ //database has hanged
     workloadLoggerThread->info("going in restart db");
+       std::string stats;
+        db->GetProperty("rocksdb.stats",&stats);
+         workloadLoggerThread->info("compaction stats {}",stats.c_str());
 //    restart_db();
-    e=epochs*-1;
+    e=-epochs;
    }
    return e;
 }

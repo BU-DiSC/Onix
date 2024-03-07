@@ -90,7 +90,7 @@ void TuningInterface::restart_db_thread(){
 
 int TuningInterface::tune_db(std::vector<std::string> values){
     int e = Database_Handler::TuneDB(values);
-    if (e==-1){
+    if (e<0){
         restart_db_thread();
     }
     return e;

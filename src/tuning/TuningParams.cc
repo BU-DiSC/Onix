@@ -46,7 +46,7 @@ void TuneParameters::tune_parameters(std::atomic<bool>& shouldExit) {
         std::string optionValue;
         while(pipe_fd == -1) {
             sleep(2);
-            pipe_fd = open("passing_params_pipe", O_RDONLY | O_TRUNC);
+            pipe_fd = open("passing_params_pipe", O_RDONLY);
             workloadLoggerThread->error("Failed to open the named pipe. Error: {}", strerror(errno));
         }
 
@@ -63,7 +63,7 @@ void TuneParameters::tune_parameters(std::atomic<bool>& shouldExit) {
             spdlog::info("new key value pairs: {}", keyValuePairsString);
             workloadLoggerThread->info("new key value pairs: {}", keyValuePairsString);
 //            keyValuePairs.insert(keyValuePairs.end(),newKeyValuePairs.begin(),newKeyValuePairs.end());
-
+        
         int epochs = signal_tune_db(keyValuePairs);
         std::string pipe_path = "passing_epochs";
 
@@ -75,7 +75,7 @@ void TuneParameters::tune_parameters(std::atomic<bool>& shouldExit) {
         }
 
         // Open the pipe for writing
-        epochs_pipe_fd = open(pipe_path.c_str(), O_RDWR | O_TRUNC);
+        epochs_pipe_fd = open(pipe_path.c_str(), O_WRONLY | O_TRUNC);
         if (epochs_pipe_fd == -1) {
             workloadLoggerThread->error("Failed to open the passing_epochs pipe. Error: {}", strerror(errno));
             return ;
