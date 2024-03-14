@@ -22,6 +22,7 @@ int epochs=0;
 int key_size = 10;
 int value_size = 100;
 int num_of_bytes_written = 0;
+bool run_queries_flag = true;
 extern std::shared_ptr<spdlog::logger> workloadLoggerThread;
 std::set<std::string> db_options_set = {"max_open_files",
                                         "max_total_wal_size",
@@ -55,7 +56,7 @@ Database_Handler::Database_Handler(int N){
 void Database_Handler::run_workloads(int empty_point_query_percentage,
     int non_empty_point_query_percentage, int range_query_percentage, int write_query_percentage, int num_queries ){
     WorkloadGenerator* run_workload= new WorkloadGenerator(db);
-    while(true){
+    while(run_queries_flag){
         for(int i=0;i<4;i++){
             run_workload -> GenerateWorkload(static_cast<double>(empty_point_query_percentage)*num_queries*0.25f*0.01,
             static_cast<double>(non_empty_point_query_percentage)*num_queries*0.25*0.01,
@@ -106,7 +107,50 @@ int calculate_wait_time(){
     workloadLoggerThread->info("wait time {}",wait_time);
     return wait_time;
 }
+
+void wait_for_compactions(){
+
+    std::vector<std::string> keys = {rocksdb::DB::Properties::kMemTableFlushPending,
+                                         rocksdb::DB::Properties::kNumRunningFlushes,
+                                         rocksdb::DB::Properties::kCompactionPending,
+                                         rocksdb::DB::Properties::kNumRunningCompactions};
+
+        workloadLoggerThread->info("wait for compaction(%s): started\n",
+                db->GetName().c_str());
+
+        while (true) {
+          bool retry = false;
+
+          for (const auto& k : keys) {
+            uint64_t v;
+            if (!db->GetIntProperty(k, &v)) {
+              workloadLoggerThread->info("wait for compaction({}): GetIntProperty({}) failed\n",
+                      db->GetName().c_str(), k.c_str());
+              exit(1);
+            } else if (v > 0) {
+              run_queries_flag = false;
+              workloadLoggerThread->info("queries paused");
+              workloadLoggerThread->info(
+                      "wait for compaction({}): active({}). Sleep 2 milliseconds\n",
+                      db->GetName().c_str(), k.c_str());
+              std::this_thread::sleep_for(std::chrono::milliseconds(2));
+              retry = true;
+              break;
+            }
+          }
+
+          if (!retry) {
+            run_queries_flag = true;
+            workloadLoggerThread->info("resume queries");
+            workloadLoggerThread->info("wait for compaction {}: finished\n",
+                    db->GetName().c_str());
+            return;
+          }
+        }
+}
+
 int Database_Handler::TuneDB(std::vector<std::string> keyValuePairs){
+    wait_for_compactions();
     std::string optionName;
     std::string optionValue;
     std::unordered_map<std::string, std::string> options_OptionsAPI;
