@@ -24,6 +24,7 @@ int value_size = 100;
 int num_of_bytes_written = 0;
 bool run_queries_flag = true;
 extern std::shared_ptr<spdlog::logger> workloadLoggerThread;
+int Database_Handler::compaction_time=0;
 std::set<std::string> db_options_set = {"max_open_files",
                                         "max_total_wal_size",
                                         "delete_obsolete_files_period_micros",
@@ -36,6 +37,7 @@ std::set<std::string> db_options_set = {"max_open_files",
 
 Database_Handler::Database_Handler(int N){
     options.create_if_missing = true;
+    options.info_log_level=rocksdb::InfoLogLevel::INFO_LEVEL;
     options.statistics =  rocksdb::CreateDBStatistics();
     rocksdb::Status status = rocksdb::DB::Open(options, db_path, &db);
 
@@ -109,16 +111,17 @@ int calculate_wait_time(){
 }
 
 void wait_for_compactions(){
-
+    Database_Handler::compaction_time=0;
     std::vector<std::string> keys = {rocksdb::DB::Properties::kMemTableFlushPending,
                                          rocksdb::DB::Properties::kNumRunningFlushes,
                                          rocksdb::DB::Properties::kCompactionPending,
                                          rocksdb::DB::Properties::kNumRunningCompactions};
 
-        workloadLoggerThread->info("wait for compaction(%s): started\n",
+       
+        while (true) {
+             workloadLoggerThread->info("wait for compaction({}): started\n",
                 db->GetName().c_str());
 
-        while (true) {
           bool retry = false;
 
           for (const auto& k : keys) {
@@ -130,6 +133,7 @@ void wait_for_compactions(){
             } else if (v > 0) {
               run_queries_flag = false;
               workloadLoggerThread->info("queries paused");
+              Database_Handler::compaction_time+=2;
               workloadLoggerThread->info(
                       "wait for compaction({}): active({}). Sleep 2 milliseconds\n",
                       db->GetName().c_str(), k.c_str());
@@ -202,10 +206,10 @@ int Database_Handler::TuneDB(std::vector<std::string> keyValuePairs){
 
     spdlog::info("Tuning parameters complete...");
     workloadLoggerThread->info("Tuning parameters complete...");
-    int targetEpochs = epochs+10;
+    int targetEpochs = epochs+15;
     int x=0;
     std::this_thread::sleep_for(std::chrono::milliseconds(2));
-    while (x<1000 && epochs < targetEpochs){
+    while (x<2000 && epochs < targetEpochs){
         workloadLoggerThread->info("waiting");
         std::this_thread::sleep_for(std::chrono::milliseconds(2));
         x+=1;

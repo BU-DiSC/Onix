@@ -14,6 +14,7 @@
 #include "spdlog/sinks/basic_file_sink.h"
 #include "spdlog/async.h"
 #include "tuning_interface.hpp"
+#include "database_handler.hpp"
 #include "zipf.hpp"
 #include <clipp.h>
 #include <fstream>
@@ -35,6 +36,7 @@ extern std::string db_path;
 
 
 std::string performance_metrics_file_path = "performance/performance_metrics.csv";
+// extern bool run_queries_flag;
 
 WorkloadGenerator::WorkloadGenerator(rocksdb::DB *new_db){
     db=new_db;
@@ -129,7 +131,7 @@ void WorkloadGenerator::GenerateWorkload(
     }
     
     double total_throughput_cumulative = (total_emptyPointQueries+total_nonEmptyPointQueries+total_rangeQueries+total_writeQueries)/(total_empty_read_duration+total_read_duration+total_range_duration+total_write_duration);
-    double total_throughput_instant = (emptyPointQueries+nonEmptyPointQueries+rangeQueries+writeQueries)/(empty_read_duration+read_duration+range_duration+write_duration);
+    double total_throughput_instant = (emptyPointQueries+nonEmptyPointQueries+rangeQueries+writeQueries)/(empty_read_duration+read_duration+range_duration+write_duration+Database_Handler::compaction_time);
 
     metricsFile << empty_read_duration << ","
                 << read_duration << ","
@@ -190,7 +192,12 @@ void WorkloadGenerator::append_valid_keys(std::string key_file_path, std::vector
 
 int WorkloadGenerator::run_random_non_empty_reads(std::vector<std::string> existing_keys, rocksdb::DB * db, int num_queries)
 {
+    
     workloadLoggerThread->info("{} Non-Empty Reads", num_queries);
+//     while(run_queries_flag){
+//         workloadLoggerThread->info("sleeping Non-Empty Reads");
+//         std::this_thread::sleep_for(std::chrono::milliseconds(2));
+//     }
     rocksdb::Status status;
 
     std::string value;
@@ -225,7 +232,12 @@ std::vector<std::string> WorkloadGenerator::generate_empty_keys(std::vector<std:
 
 int WorkloadGenerator::run_random_empty_reads(std::vector<std::string> existing_keys, rocksdb::DB * db, int num_queries)
 {
+    
     workloadLoggerThread->info("{} Empty Reads", num_queries);
+//     while(run_queries_flag){
+//         workloadLoggerThread->info("sleeping Empty Reads");
+//         std::this_thread::sleep_for(std::chrono::milliseconds(2));
+//     }
     rocksdb::Status status;
 
     std::string value;
@@ -246,7 +258,12 @@ int WorkloadGenerator::run_random_empty_reads(std::vector<std::string> existing_
 
 int WorkloadGenerator::run_range_reads(std::vector<std::string> existing_keys, rocksdb::DB * db, int num_queries)
 {
+    
     workloadLoggerThread->info("{} Range Queries", num_queries);
+//     while(run_queries_flag){
+//         workloadLoggerThread->info("sleeping Range Queries");
+//         std::this_thread::sleep_for(std::chrono::milliseconds(2));
+//     }
     rocksdb::ReadOptions read_opt;
     rocksdb::Status status;
     std::string lower_key, upper_key;
@@ -289,7 +306,12 @@ int WorkloadGenerator::run_range_reads(std::vector<std::string> existing_keys, r
 
 int WorkloadGenerator::run_random_inserts(std::string key_file_path, rocksdb::DB * db, int num_queries)
 {
+    
     workloadLoggerThread->info("{} Write Queries", num_queries);
+//     while(run_queries_flag){
+//         workloadLoggerThread->info("sleeping Write Queries");
+//         std::this_thread::sleep_for(std::chrono::milliseconds(2));
+//     }
     rocksdb::WriteOptions write_opt;
     rocksdb::Status status;
     std::vector<std::string> new_keys;
@@ -338,7 +360,12 @@ int WorkloadGenerator::run_random_inserts(std::string key_file_path, rocksdb::DB
 
 int WorkloadGenerator::run_random_updates(std::vector<std::string> existing_keys,std::string key_file_path, rocksdb::DB * db, int num_queries)
 {
+    
     workloadLoggerThread->info("{} Update Queries", num_queries);
+//     while(run_queries_flag){
+//         workloadLoggerThread->info("sleeping Update Queries");
+//         std::this_thread::sleep_for(std::chrono::milliseconds(2));
+//     }
     rocksdb::WriteOptions write_opt;
     rocksdb::Status status;
     write_opt.no_slowdown = false; //> enabling this will make some insertions fail

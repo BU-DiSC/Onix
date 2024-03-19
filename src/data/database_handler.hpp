@@ -5,6 +5,7 @@ class Database_Handler {
 public:
     Database_Handler(int N);
     static void restart_db();
+    static int compaction_time;
     static void run_workloads(int empty_point_query_percentage,
                               int non_empty_point_query_percentage,
                               int range_query_percentage,
