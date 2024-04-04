@@ -206,10 +206,12 @@ int Database_Handler::TuneDB(std::vector<std::string> keyValuePairs){
 
     spdlog::info("Tuning parameters complete...");
     workloadLoggerThread->info("Tuning parameters complete...");
-    int targetEpochs = epochs+15;
+//     int targetEpochs = epochs+15;
+    int targetEpochs = epochs+105;
     int x=0;
     std::this_thread::sleep_for(std::chrono::milliseconds(2));
-    while (x<2000 && epochs < targetEpochs){
+    while (x<28014 && epochs < targetEpochs){
+//     while (x<2000 && epochs < targetEpochs){
         workloadLoggerThread->info("waiting");
         std::this_thread::sleep_for(std::chrono::milliseconds(2));
         x+=1;
