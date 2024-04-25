@@ -13,6 +13,7 @@
 #include <unistd.h>
 #include <cstdlib>
 #include <iostream>
+#include <cstdarg>
 
 std::string key_file_path =  "database/keyfile.txt";
 std::string db_path = "database/mlosDb";
@@ -36,7 +37,7 @@ std::set<std::string> db_options_set = {"max_open_files",
 
 Database_Handler::Database_Handler(int N){
     options.create_if_missing = true;
-    options.info_log_level=rocksdb::InfoLogLevel::INFO_LEVEL;
+    options.info_log_level=rocksdb::InfoLogLevel::DEBUG_LEVEL;
     options.statistics =  rocksdb::CreateDBStatistics();
     rocksdb::Status status = rocksdb::DB::Open(options, db_path, &db);
 
@@ -152,6 +153,18 @@ void wait_for_compactions(){
         }
 }
 
+void logMessage(int ep, ...) {
+    va_list args_list;
+    va_start(args_list, ep);
+
+    int epoch_value = va_arg(args_list, int);
+
+    options.info_log->Logv(rocksdb::InfoLogLevel::INFO_LEVEL, "restarting RocksDB %d", args_list);
+
+    va_end(args_list);
+}
+
+
 int Database_Handler::TuneDB(std::vector<std::string> keyValuePairs){
     wait_for_compactions();
     std::string optionName;
@@ -223,7 +236,9 @@ int Database_Handler::TuneDB(std::vector<std::string> keyValuePairs){
         db->GetProperty("rocksdb.stats",&stats);
          workloadLoggerThread->info("compaction stats {}",stats.c_str());
 //    restart_db();
-    e=-e;
+
+    logMessage(epochs);
+    e=-epochs;
    }
    return e;
 }
