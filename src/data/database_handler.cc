@@ -21,8 +21,7 @@ rocksdb::Options options;
 int epochs=0;
 int key_size = 10;
 int value_size = 100;
-int num_of_bytes_written = 0;
-bool run_queries_flag = true;
+bool Database_Handler::run_queries_flag = true;
 extern std::shared_ptr<spdlog::logger> workloadLoggerThread;
 int Database_Handler::compaction_time=0;
 std::set<std::string> db_options_set = {"max_open_files",
@@ -97,18 +96,18 @@ std::string trim(const std::string & source) {
     return s;
 }
 
-int calculate_wait_time(){
-    spdlog::info("waiting 2 milli secs");
-    return 2;
-    int wait_time = 10;
-    num_of_bytes_written = options.statistics->getTickerCount(rocksdb::BYTES_WRITTEN);
-    if (0.0000001*num_of_bytes_written>10) {
-        wait_time=0.0000001*num_of_bytes_written;
-    }
-
-    workloadLoggerThread->info("wait time {}",wait_time);
-    return wait_time;
-}
+//int calculate_wait_time(){
+//    spdlog::info("waiting 2 milli secs");
+//    return 2;
+//    int wait_time = 10;
+//    num_of_bytes_written = options.statistics->getTickerCount(rocksdb::BYTES_WRITTEN);
+//    if (0.0000001*num_of_bytes_written>10) {
+//        wait_time=0.0000001*num_of_bytes_written;
+//    }
+//
+//    workloadLoggerThread->info("wait time {}",wait_time);
+//    return wait_time;
+//}
 
 void wait_for_compactions(){
     Database_Handler::compaction_time=0;
@@ -131,7 +130,7 @@ void wait_for_compactions(){
                       db->GetName().c_str(), k.c_str());
               exit(1);
             } else if (v > 0) {
-              run_queries_flag = false;
+              Database_Handler::run_queries_flag = false;
               workloadLoggerThread->info("queries paused");
               Database_Handler::compaction_time+=2;
               workloadLoggerThread->info(
@@ -144,7 +143,7 @@ void wait_for_compactions(){
           }
 
           if (!retry) {
-            run_queries_flag = true;
+            Database_Handler::run_queries_flag = true;
             workloadLoggerThread->info("resume queries");
             workloadLoggerThread->info("wait for compaction {}: finished\n",
                     db->GetName().c_str());

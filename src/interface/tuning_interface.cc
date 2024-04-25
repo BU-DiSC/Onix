@@ -78,14 +78,30 @@ TuningInterface::TuningInterface(){
 }
 
 //option 2 - kill thread
-void TuningInterface::restart_db_thread(){
-    workloadLoggerThread->info("kill workload thread");
-    workload_running_thread.std::thread::~thread();
-    workloadLoggerThread->info("restart workload thread");
-    std::thread workload_running_thread(&Database_Handler::run_workloads,empty_point_query_percentage,
-        non_empty_point_query_percentage,range_query_percentage,write_query_percentage,num_queries);
-        workload_running_thread.detach();
-        return;
+//void TuningInterface::restart_db_thread(){
+//    workloadLoggerThread->info("kill workload thread");
+//    workload_running_thread.std::thread::~thread();
+//    workloadLoggerThread->info("restart workload thread");
+//    std::thread workload_running_thread(&Database_Handler::run_workloads,empty_point_query_percentage,
+//        non_empty_point_query_percentage,range_query_percentage,write_query_percentage,num_queries);
+//        workload_running_thread.detach();
+//        return;
+//}
+
+void TuningInterface::restart_db_thread() {
+    workloadLoggerThread->info("Stopping workload thread");
+    Database_Handler::run_queries_flag = false;  // Set the flag to stop the thread
+    if (workload_running_thread.joinable()) {
+        workload_running_thread.join();
+    }
+
+    workloadLoggerThread->info("Restarting workload thread");
+    Database_Handler::run_queries_flag = true;  // Reset the flag to allow the thread to run again
+    workload_running_thread = std::thread(&Database_Handler::run_workloads, empty_point_query_percentage,
+                                          non_empty_point_query_percentage, range_query_percentage,
+                                          write_query_percentage, num_queries);
+    workload_running_thread.detach();
+    return;
 }
 
 int TuningInterface::tune_db(std::vector<std::string> values){
