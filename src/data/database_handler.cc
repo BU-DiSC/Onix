@@ -205,24 +205,25 @@ int Database_Handler::TuneDB(std::vector<std::string> keyValuePairs){
 
     spdlog::info("Tuning parameters complete...");
     workloadLoggerThread->info("Tuning parameters complete...");
-//     int targetEpochs = epochs+15;
-    int targetEpochs = epochs+105;
+    int initialEpochs = epochs;
+    int targetEpochs = epochs+15;
+//     int targetEpochs = epochs+105;
     int x=0;
     std::this_thread::sleep_for(std::chrono::milliseconds(2));
-    while (x<28014 && epochs < targetEpochs){
-//     while (x<2000 && epochs < targetEpochs){
+//     while (x<28014 && epochs < targetEpochs){
+    while (x<2000 && epochs < targetEpochs){
         workloadLoggerThread->info("waiting");
         std::this_thread::sleep_for(std::chrono::milliseconds(2));
         x+=1;
     }
-   int e=std::max(epochs-1,0); //adjust indexing
+   int e=std::max(initialEpochs-1,0); //adjust indexing
    if (epochs<targetEpochs){ //database has hanged
     workloadLoggerThread->info("going in restart db");
        std::string stats;
         db->GetProperty("rocksdb.stats",&stats);
          workloadLoggerThread->info("compaction stats {}",stats.c_str());
 //    restart_db();
-    e=-epochs;
+    e=-e;
    }
    return e;
 }
