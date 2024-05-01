@@ -52,6 +52,13 @@ Database_Handler::Database_Handler(int N){
             spdlog::debug("Failed to bulk load database: ",status.ToString());
             return;
     }
+    WorkloadGenerator* run_workload= new WorkloadGenerator(db);
+                run_workload -> GenerateWorkload(1000,1000,1000,1000,0,key_file_path);
+                std::string stats;
+                db->GetProperty("rocksdb.stats",&stats);
+                 workloadLoggerThread->info("compaction stats {}",stats.c_str());
+                 workloadLoggerThread->info("db warm up complete");
+
 }
 
 
@@ -189,6 +196,8 @@ int Database_Handler::TuneDB(std::vector<std::string> keyValuePairs){
 
             spdlog::info("new parameter {} {}", optionName, optionValue);
             workloadLoggerThread->info("new parameter {} {}", optionName, optionValue);
+        } else{
+            spdlog::info("= not found");
         }
     }
     workloadLoggerThread->info("Tuning parameter...");
@@ -219,13 +228,12 @@ int Database_Handler::TuneDB(std::vector<std::string> keyValuePairs){
     spdlog::info("Tuning parameters complete...");
     workloadLoggerThread->info("Tuning parameters complete...");
     int initialEpochs = epochs;
-    int targetEpochs = epochs+6;
-    int targetEpochs = epochs+1005;
+//      int targetEpochs = epochs+6;
+  int targetEpochs = epochs+1005;
     int x=0;
     std::this_thread::sleep_for(std::chrono::milliseconds(2));
-//     while (x<134000 && epochs < targetEpochs){
-//     while (x<2000 && epochs < targetEpochs){
-    while (x<800 && epochs < targetEpochs){
+    while (x<134000 && epochs < targetEpochs){
+//    while (x<800 && epochs < targetEpochs){
         workloadLoggerThread->info("waiting");
         std::this_thread::sleep_for(std::chrono::milliseconds(2));
         x+=1;
@@ -238,7 +246,7 @@ int Database_Handler::TuneDB(std::vector<std::string> keyValuePairs){
          workloadLoggerThread->info("compaction stats {}",stats.c_str());
 //    restart_db();
 
-    logMessage(epochs);
+//    logMessage(epochs);
     e=-epochs;
    }
    return e;

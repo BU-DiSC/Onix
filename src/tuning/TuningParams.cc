@@ -40,7 +40,7 @@ void TuneParameters::tune_parameters(std::atomic<bool>& shouldExit) {
 
         int pipe_fd = -1;
         int epochs_pipe_fd =-1;
-        char buffer[10000];
+        char buffer[500];
         ssize_t read_result;
         std::string optionName;
         std::string optionValue;
