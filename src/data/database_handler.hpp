@@ -6,6 +6,7 @@ public:
     Database_Handler(int N);
     static void restart_db();
     static int compaction_time;
+    static int total_compaction_time;
     static bool run_queries_flag;
     static void run_workloads(int empty_point_query_percentage,
                               int non_empty_point_query_percentage,
