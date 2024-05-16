@@ -25,6 +25,7 @@ int value_size = 100;
 bool Database_Handler::run_queries_flag = true;
 extern std::shared_ptr<spdlog::logger> workloadLoggerThread;
 int Database_Handler::compaction_time=0;
+int Database_Handler::total_compaction_time=0;
 std::set<std::string> db_options_set = {"max_open_files",
                                         "max_total_wal_size",
                                         "delete_obsolete_files_period_micros",
@@ -119,6 +120,7 @@ std::string trim(const std::string & source) {
 
 void wait_for_compactions(){
     Database_Handler::compaction_time=0;
+    Database_Handler::total_compaction_time=0;
     std::vector<std::string> keys = {rocksdb::DB::Properties::kMemTableFlushPending,
                                          rocksdb::DB::Properties::kNumRunningFlushes,
                                          rocksdb::DB::Properties::kCompactionPending,
@@ -155,20 +157,10 @@ void wait_for_compactions(){
             workloadLoggerThread->info("resume queries");
             workloadLoggerThread->info("wait for compaction {}: finished\n",
                     db->GetName().c_str());
+            Database_Handler::total_compaction_time+=Database_Handler::compaction_time;
             return;
           }
         }
-}
-
-void logMessage(int ep, ...) {
-    va_list args_list;
-    va_start(args_list, ep);
-
-    int epoch_value = va_arg(args_list, int);
-
-    options.info_log->Logv(rocksdb::InfoLogLevel::INFO_LEVEL, "restarting RocksDB %d", args_list);
-
-    va_end(args_list);
 }
 
 
@@ -187,7 +179,9 @@ int Database_Handler::TuneDB(std::vector<std::string> keyValuePairs){
             std::string optionValue = keyValuePair.substr(pos + 1);
             trim(optionName);
             trim(optionValue);
-
+            if(optionName.empty() || optionValue.empty()){
+                break;
+            }
             if (db_options_set.find(optionName) != db_options_set.end()) {
                 options_DbOptionsAPI[optionName] = optionValue;
             } else {
@@ -198,6 +192,7 @@ int Database_Handler::TuneDB(std::vector<std::string> keyValuePairs){
             workloadLoggerThread->info("new parameter {} {}", optionName, optionValue);
         } else{
             spdlog::info("= not found");
+            break;
         }
     }
     workloadLoggerThread->info("Tuning parameter...");
@@ -229,10 +224,12 @@ int Database_Handler::TuneDB(std::vector<std::string> keyValuePairs){
     workloadLoggerThread->info("Tuning parameters complete...");
     int initialEpochs = epochs;
 //      int targetEpochs = epochs+6;
-  int targetEpochs = epochs+1005;
+    int targetEpochs = epochs+1005;
+//     int targetEpochs = epochs+30000;
     int x=0;
     std::this_thread::sleep_for(std::chrono::milliseconds(2));
     while (x<134000 && epochs < targetEpochs){
+//     while (x<2000000 && epochs < targetEpochs){
 //    while (x<800 && epochs < targetEpochs){
         workloadLoggerThread->info("waiting");
         std::this_thread::sleep_for(std::chrono::milliseconds(2));

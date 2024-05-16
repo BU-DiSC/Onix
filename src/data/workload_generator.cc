@@ -130,7 +130,7 @@ void WorkloadGenerator::GenerateWorkload(
 
     }
     
-    double total_throughput_cumulative = (total_emptyPointQueries+total_nonEmptyPointQueries+total_rangeQueries+total_writeQueries)/(total_empty_read_duration+total_read_duration+total_range_duration+total_write_duration);
+    double total_throughput_cumulative = (total_emptyPointQueries+total_nonEmptyPointQueries+total_rangeQueries+total_writeQueries)/(total_empty_read_duration+total_read_duration+total_range_duration+total_write_duration+Database_Handler::total_compaction_time);
     double total_throughput_instant = (emptyPointQueries+nonEmptyPointQueries+rangeQueries+writeQueries)/(empty_read_duration+read_duration+range_duration+write_duration+Database_Handler::compaction_time);
 
     metricsFile << empty_read_duration << ","
