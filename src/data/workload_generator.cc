@@ -33,6 +33,9 @@ extern rocksdb::DB *db;
 extern int epochs;
 extern std::shared_ptr<spdlog::logger> workloadLoggerThread;
 extern std::string db_path;
+double empty_read_duration = 0, read_duration = 0, range_duration = 0, write_duration = 0;
+double total_empty_read_duration = 0, total_read_duration = 0, total_range_duration = 0, total_write_duration = 0;
+int total_writeQueries = 0, total_emptyPointQueries = 0, total_nonEmptyPointQueries = 0, total_rangeQueries = 0;
 
 
 std::string performance_metrics_file_path = "performance/performance_metrics.csv";
@@ -69,9 +72,6 @@ void WorkloadGenerator::GenerateWorkload(
 
     WorkloadGenerator workload_generator(db);
 
-    double empty_read_duration = 0, read_duration = 0, range_duration = 0, write_duration = 0;
-    double total_empty_read_duration = 0, total_read_duration = 0, total_range_duration = 0, total_write_duration = 0;
-    int total_writeQueries = 0, total_emptyPointQueries = 0, total_nonEmptyPointQueries = 0, total_rangeQueries = 0;
     std::vector<std::string> existing_keys;
 
     if ((nonEmptyPointQueries > 0) || (rangeQueries > 0 || emptyPointQueries > 0))
@@ -336,8 +336,8 @@ int WorkloadGenerator::run_random_inserts(std::string key_file_path, rocksdb::DB
             if (writes_failed > max_writes_failed)
             {
                 workloadLoggerThread->error("10\% of total writes have failed");
-                break;
-//                return -1;
+//                break;
+                return -1;
 //                db->Close();
 //                delete db;
 //                exit(EXIT_FAILURE);
@@ -390,7 +390,7 @@ int WorkloadGenerator::run_random_updates(std::vector<std::string> existing_keys
             if (writes_failed > max_writes_failed)
             {
                 workloadLoggerThread->error("10\% of total writes have failed, aborting");
-//                return -1;
+                return -1;
 //                exit(EXIT_FAILURE);
             }
         }

@@ -14,6 +14,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <cstdarg>
+#include <future>
 
 std::string key_file_path =  "database/keyfile.txt";
 std::string db_path = "database/mlosDb";
@@ -175,6 +176,7 @@ int Database_Handler::TuneDB(std::vector<std::string> keyValuePairs){
         spdlog::info("next pair {}", keyValuePair);
         size_t pos = keyValuePair.find('=');
         if (pos != std::string::npos) {
+            spdlog::info("pos {}",pos);
             std::string optionName = keyValuePair.substr(0, pos);
             std::string optionValue = keyValuePair.substr(pos + 1);
             trim(optionName);
@@ -195,41 +197,70 @@ int Database_Handler::TuneDB(std::vector<std::string> keyValuePairs){
             break;
         }
     }
+    spdlog::info("tuning - calling APIs");
     workloadLoggerThread->info("Tuning parameter...");
-    try {
+    std::future<bool> setOptionsResult, setDBOptionsResult;
+    bool result1 = true, result2 = true;
         if (!options_OptionsAPI.empty()){
-            
+            setOptionsResult = std::async(std::launch::async, [&]() {
             rocksdb::Status status1 = db->SetOptions(options_OptionsAPI);
             
             if (!status1.ok()) {
                 spdlog::error("Failed to set options: {}", status1.ToString() );
                 workloadLoggerThread->error("Failed to set options: {}", status1.ToString() );
+                return false;
             }
+            return true;
+            });
         }
 
         if (!options_DbOptionsAPI.empty()){
+            setDBOptionsResult = std::async(std::launch::async, [&]() {
             rocksdb::Status status2 = db->SetDBOptions(options_DbOptionsAPI);
             if (!status2.ok()) {
-                        spdlog::error("Failed to set db options:{} ",status2.ToString());
-                        workloadLoggerThread->error("Failed to set db options:{} ",status2.ToString());
+                spdlog::error("Failed to set db options:{} ",status2.ToString());
+                workloadLoggerThread->error("Failed to set db options:{} ",status2.ToString());
+                return false;
             }
+            return true;
+            });
         }
-    } catch(const std::exception& e) {
-        workloadLoggerThread->error("Exception caught: {}",e.what());
-    } catch(...) {
-        workloadLoggerThread->error("Unknown exception caught.");
-    }
 
+            if (!options_OptionsAPI.empty()) {
+                auto status = setOptionsResult.wait_for(std::chrono::seconds(10));
+                if (status == std::future_status::timeout) {
+                    spdlog::info("Timeout occurred while setting options");
+                    workloadLoggerThread->info("Timeout occurred while setting options");
+                    return -epochs;
+                } else {
+                    result1 = setOptionsResult.get();
+                }
+            }
+
+            if (!options_DbOptionsAPI.empty()) {
+                auto status = setDBOptionsResult.wait_for(std::chrono::seconds(10));
+                if (status == std::future_status::timeout) {
+                    spdlog::info("Timeout occurred while setting db options");
+                    workloadLoggerThread->error("Timeout occurred while setting db options");
+                    return -epochs;
+                } else {
+                    result2 = setDBOptionsResult.get();
+                }
+            }
+
+    spdlog::info("checking result1 and result2");
+    if (!result1 || !result2){
+        spdlog::info("returning after api timeout");
+        return -epochs;
+    }
     spdlog::info("Tuning parameters complete...");
     workloadLoggerThread->info("Tuning parameters complete...");
     int initialEpochs = epochs;
 //      int targetEpochs = epochs+6;
     int targetEpochs = epochs+1005;
-//     int targetEpochs = epochs+30000;
     int x=0;
     std::this_thread::sleep_for(std::chrono::milliseconds(2));
     while (x<134000 && epochs < targetEpochs){
-//     while (x<2000000 && epochs < targetEpochs){
 //    while (x<800 && epochs < targetEpochs){
         workloadLoggerThread->info("waiting");
         std::this_thread::sleep_for(std::chrono::milliseconds(2));
